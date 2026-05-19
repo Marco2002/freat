@@ -7,15 +7,14 @@ import {
   keyOf,
 } from './data';
 
-const PAD_L = 60, PAD_R = 34, PAD_T = 40, PAD_B = 26;
+const PAD_L = 60, PAD_R = 34, PAD_T = 40, PAD_B = 42;
 const FRET_W = 124, STRING_GAP = 48;
+const BOARD_OVERHANG_V = 22;
+const BOARD_OVERHANG_H = 22;
 const INNER_W = FRETS.length * FRET_W;
 const INNER_H = 5 * STRING_GAP;
 const BOARD_W = PAD_L + PAD_R + INNER_W;
 const BOARD_H = PAD_T + PAD_B + INNER_H;
-
-const fretX = (fret: number): number =>
-  PAD_L + (fret - FRETS[0]) * FRET_W + FRET_W / 2;
 
 const stringY = (s: number, invert: boolean): number =>
   PAD_T + (invert ? 5 - s : s) * STRING_GAP;
@@ -28,16 +27,26 @@ interface FretboardProps {
   phase: Phase;
   invert: boolean;
   onToggle: (key: string) => void;
+  compact?: boolean;
 }
 
 const INLAY_FRETS = [5, 7];
 
-export function Fretboard({ selected, targetKeys, phase, invert, onToggle }: FretboardProps) {
+export function Fretboard({ selected, targetKeys, phase, invert, onToggle, compact = false }: FretboardProps) {
+  // In compact mode the board fills the full viewBox width edge-to-edge:
+  // padL/padR shrink to just the overhang so the board rect starts at x=0.
+  const padL = compact ? BOARD_OVERHANG_H : PAD_L;
+  const padR = compact ? BOARD_OVERHANG_H : PAD_R;
+  const viewBoxW = padL + padR + INNER_W;
+  const boardRx = compact ? 0 : 8;
+
+  const fretX = (fret: number) => padL + (fret - FRETS[0]) * FRET_W + FRET_W / 2;
+
   return (
     <svg
-      viewBox={`0 0 ${BOARD_W} ${BOARD_H}`}
+      viewBox={`0 0 ${viewBoxW} ${BOARD_H}`}
       width="100%"
-      style={{ maxWidth: BOARD_W, display: 'block' }}
+      style={compact ? { display: 'block' } : { maxWidth: BOARD_W, display: 'block' }}
     >
       <defs>
         <linearGradient id="grain" x1="0" y1="0" x2="0" y2="1">
@@ -48,8 +57,8 @@ export function Fretboard({ selected, targetKeys, phase, invert, onToggle }: Fre
       </defs>
 
       {/* board surface */}
-      <rect x={PAD_L - 14} y={PAD_T - 16} width={INNER_W + 28} height={INNER_H + 32} rx={8} fill="#231f1b" />
-      <rect x={PAD_L - 14} y={PAD_T - 16} width={INNER_W + 28} height={INNER_H + 32} rx={8} fill="url(#grain)" opacity={0.4} />
+      <rect x={padL - BOARD_OVERHANG_H} y={PAD_T - BOARD_OVERHANG_V} width={INNER_W + BOARD_OVERHANG_H * 2} height={INNER_H + BOARD_OVERHANG_V * 2} rx={boardRx} fill="#231f1b" />
+      <rect x={padL - BOARD_OVERHANG_H} y={PAD_T - BOARD_OVERHANG_V} width={INNER_W + BOARD_OVERHANG_H * 2} height={INNER_H + BOARD_OVERHANG_V * 2} rx={boardRx} fill="url(#grain)" opacity={0.4} />
 
       {/* inlay dots */}
       {INLAY_FRETS.map((f) => (
@@ -60,8 +69,8 @@ export function Fretboard({ selected, targetKeys, phase, invert, onToggle }: Fre
       {Array.from({ length: FRETS.length + 1 }, (_, i) => (
         <line
           key={i}
-          x1={PAD_L + i * FRET_W} y1={PAD_T - 16}
-          x2={PAD_L + i * FRET_W} y2={PAD_T + INNER_H + 16}
+          x1={padL + i * FRET_W} y1={PAD_T - BOARD_OVERHANG_V}
+          x2={padL + i * FRET_W} y2={PAD_T + INNER_H + BOARD_OVERHANG_V}
           stroke="#8a857d" strokeWidth={2.2} strokeLinecap="round"
         />
       ))}
@@ -70,17 +79,17 @@ export function Fretboard({ selected, targetKeys, phase, invert, onToggle }: Fre
       {Array.from({ length: 6 }, (_, i) => (
         <line
           key={i}
-          x1={PAD_L - 14} y1={stringY(i, invert)}
-          x2={PAD_L + INNER_W + 14} y2={stringY(i, invert)}
+          x1={padL - BOARD_OVERHANG_H} y1={stringY(i, invert)}
+          x2={padL + INNER_W + BOARD_OVERHANG_H} y2={stringY(i, invert)}
           stroke="#d8d2c4" strokeWidth={STRING_THICKNESS[i]} opacity={0.85}
         />
       ))}
 
-      {/* string labels */}
-      {STRING_LABELS.map((label, i) => (
+      {/* string labels — hidden in compact mode */}
+      {!compact && STRING_LABELS.map((label, i) => (
         <text
           key={i}
-          x={PAD_L - 30} y={stringY(i, invert)}
+          x={padL - 30} y={stringY(i, invert)}
           fill="#7d7a72" fontSize={11.5}
           textAnchor="middle" dominantBaseline="central"
           fontFamily="'JetBrains Mono', monospace"

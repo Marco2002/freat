@@ -3,6 +3,17 @@ import { CHORDS, POSITION_NOTES, keyOf } from './data';
 import { Fretboard } from './Fretboard';
 import type { Phase } from './Fretboard';
 
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 640px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 function pickNext(prevIdx: number): number {
   let next: number;
   do { next = Math.floor(Math.random() * CHORDS.length); }
@@ -15,6 +26,8 @@ export function ArpeggioDrill() {
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [phase, setPhase] = useState<Phase>('playing');
   const [streak, setStreak] = useState(0);
+  const isMobile = useIsMobile();
+
   const [invert, setInvert] = useState(() => {
     try {
       const stored = localStorage.getItem('arp-invert');
@@ -100,6 +113,7 @@ export function ArpeggioDrill() {
           phase={phase}
           invert={invert}
           onToggle={toggle}
+          compact={isMobile}
         />
       </div>
 
