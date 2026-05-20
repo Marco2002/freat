@@ -175,29 +175,29 @@ body {
 
 @media (max-width: 640px) {
   .drill {
-    padding: 24px 0 32px;
+    padding: 24px 0 0;
     gap: 16px;
   }
 
-  /* text rows get their own side padding */
   .top-row {
     padding: 0 16px;
     max-width: 100%;
   }
+
+  /* instructions on top row, streak + skip below */
   .meta-row {
     padding: 0 16px;
     max-width: 100%;
     grid-template-columns: 1fr 1fr;
     grid-template-areas:
-      "left   skip"
-      "center center";
+      "center center"
+      "left   skip";
     row-gap: 12px;
   }
   .meta-left { grid-area: left; }
   .meta-center { grid-area: center; }
   .skip-btn { grid-area: skip; }
 
-  /* compact prompt — rank takes less vertical space */
   .prompt {
     min-height: auto;
     padding: 0 16px;
@@ -207,8 +207,14 @@ body {
     font-size: clamp(72px, 22vw, 110px);
   }
 
-  /* board fills the full device width */
+  .meta-row {
+    order: 9;
+    margin-top: auto;
+  }
+
+  /* fretboard pushed to the bottom of the viewport */
   .board-wrap {
     width: 100%;
+    order: 10;
   }
 }
