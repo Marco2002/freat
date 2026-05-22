@@ -1,11 +1,10 @@
 import {
-  FRETS,
-  POSITION_NOTES,
-  ROOT_NOTE,
+  ALL_INLAY_FRETS,
   STRING_LABELS,
   STRING_THICKNESS,
   keyOf,
 } from './data';
+import type { PositionNote } from './data';
 import { playNote } from './audio';
 
 const PAD_L = 60, PAD_R = 34, PAD_T = 40, PAD_B = 42;
@@ -21,6 +20,8 @@ const stringY = (s: number, invert: boolean): number =>
 export type Phase = 'playing' | 'success';
 
 interface FretboardProps {
+  frets: readonly number[];
+  positionNotes: PositionNote[];
   selected: Set<string>;
   targetKeys: Set<string>;
   phase: Phase;
@@ -29,20 +30,17 @@ interface FretboardProps {
   compact?: boolean;
 }
 
-const INLAY_FRETS = [5, 7];
-
-export function Fretboard({ selected, targetKeys, phase, invert, onToggle, compact = false }: FretboardProps) {
-  // In compact mode the board fills the full viewBox width edge-to-edge:
-  // padL/padR shrink to just the overhang so the board rect starts at x=0.
-  // Fret width also shrinks so the notes appear larger on small screens.
+export function Fretboard({ frets, positionNotes, selected, targetKeys, phase, invert, onToggle, compact = false }: FretboardProps) {
   const fretW = compact ? FRET_W_COMPACT : FRET_W;
-  const innerW = FRETS.length * fretW;
+  const innerW = frets.length * fretW;
   const padL = compact ? BOARD_OVERHANG_H : PAD_L;
   const padR = compact ? BOARD_OVERHANG_H : PAD_R;
   const viewBoxW = padL + padR + innerW;
   const boardRx = compact ? 0 : 8;
 
-  const fretX = (fret: number) => padL + (fret - FRETS[0]) * fretW + fretW / 2;
+  const fretX = (fret: number) => padL + (fret - frets[0]) * fretW + fretW / 2;
+
+  const inlayFrets = ALL_INLAY_FRETS.filter(f => f >= frets[0] && f <= frets[frets.length - 1]);
 
   return (
     <svg
@@ -62,13 +60,13 @@ export function Fretboard({ selected, targetKeys, phase, invert, onToggle, compa
       <rect x={padL - BOARD_OVERHANG_H} y={PAD_T - BOARD_OVERHANG_V} width={innerW + BOARD_OVERHANG_H * 2} height={INNER_H + BOARD_OVERHANG_V * 2} rx={boardRx} fill="#231f1b" />
       <rect x={padL - BOARD_OVERHANG_H} y={PAD_T - BOARD_OVERHANG_V} width={innerW + BOARD_OVERHANG_H * 2} height={INNER_H + BOARD_OVERHANG_V * 2} rx={boardRx} fill="url(#grain)" opacity={0.4} />
 
-      {/* inlay dots */}
-      {INLAY_FRETS.map((f) => (
+      {/* inlay dots at standard guitar positions within current fret range */}
+      {inlayFrets.map((f) => (
         <circle key={`dot-${f}`} cx={fretX(f)} cy={PAD_T + INNER_H / 2} r={5.5} fill="#f0eee9" opacity={0.13} />
       ))}
 
       {/* fret wires */}
-      {Array.from({ length: FRETS.length + 1 }, (_, i) => (
+      {Array.from({ length: frets.length + 1 }, (_, i) => (
         <line
           key={i}
           x1={padL + i * fretW} y1={PAD_T - BOARD_OVERHANG_V}
@@ -102,11 +100,11 @@ export function Fretboard({ selected, targetKeys, phase, invert, onToggle, compa
       ))}
 
       {/* notes */}
-      {POSITION_NOTES.map((n) => {
+      {positionNotes.map((n) => {
         const key = keyOf(n);
         const isSelected = selected.has(key);
         const isSuccess = phase === 'success' && targetKeys.has(key);
-        const isRoot = n.note === ROOT_NOTE;
+        const isRoot = n.degree === 1;
         const x = fretX(n.f);
         const y = stringY(n.s, invert);
 

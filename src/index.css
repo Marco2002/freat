@@ -232,6 +232,360 @@ body {
   cursor: default;
 }
 
+/* ── Menu page ─────────────────────────────────────────── */
+.menu-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 56px;
+  padding: 32px;
+}
+
+.menu-title {
+  text-align: center;
+}
+
+.menu-title h1 {
+  font-family: "Instrument Serif", serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(56px, 12vw, 96px);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  color: #29261b;
+  margin: 0 0 20px;
+}
+
+.menu-title p {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a857d;
+  margin: 0;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.primary-btn {
+  background: #29261b;
+  color: #f0eee9;
+  border: none;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 16px 44px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.primary-btn:hover:not(:disabled) {
+  opacity: 0.82;
+}
+
+.primary-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.secondary-btn {
+  background: transparent;
+  color: #29261b;
+  border: 1.5px solid rgba(41, 38, 27, 0.25);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 14px 44px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.secondary-btn:hover {
+  border-color: rgba(41, 38, 27, 0.5);
+}
+
+/* ── Position select page ──────────────────────────────── */
+.select-page {
+  height: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 48px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+}
+
+.select-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.select-section-shapes {
+  flex: 1;
+  overflow: hidden;
+}
+
+.select-section-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #aaa49a;
+}
+
+.select-pill-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.select-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.select-title {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a857d;
+}
+
+.back-btn {
+  flex: none;
+  background: transparent;
+  border: 1px solid rgba(41, 38, 27, 0.15);
+  color: #7d7a72;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.back-btn:hover {
+  border-color: rgba(41, 38, 27, 0.35);
+  color: #29261b;
+}
+
+.position-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  flex: 1;
+  overflow-y: auto;
+  align-content: start;
+}
+
+.position-card {
+  border: 1.5px solid rgba(41, 38, 27, 0.13);
+  border-radius: 14px;
+  padding: 14px 14px 16px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+  background: transparent;
+  text-align: left;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.position-card:hover {
+  border-color: rgba(41, 38, 27, 0.3);
+}
+
+.position-card.selected {
+  border-color: #e0a458;
+  background: rgba(224, 164, 88, 0.07);
+}
+
+.position-card-label {
+  font-family: "Instrument Serif", serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 1;
+  color: #29261b;
+}
+
+.position-card-frets {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #aaa49a;
+}
+
+.select-footer {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .select-page {
+    padding: 32px 16px;
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+    gap: 16px;
+  }
+
+  .select-pill-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+
+  .select-pill-row::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ── Theory page ───────────────────────────────────────── */
+.theory-page {
+  height: 100%;
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 56px 32px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow: hidden;
+}
+
+.theory-selectors {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.theory-selector-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #aaa49a;
+  flex: none;
+  width: 56px;
+}
+
+.theory-pill-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.theory-pill {
+  background: transparent;
+  border: 1.5px solid rgba(41, 38, 27, 0.13);
+  color: #7d7a72;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.theory-pill:hover {
+  border-color: rgba(41, 38, 27, 0.3);
+  color: #29261b;
+}
+
+.theory-pill.active {
+  background: #29261b;
+  border-color: #29261b;
+  color: #f0eee9;
+}
+
+.theory-chord-info {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.theory-chord-rank {
+  font-family: "Instrument Serif", serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(36px, 6vw, 56px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #29261b;
+}
+
+.theory-chord-meta {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #7d7a72;
+}
+
+@media (max-width: 640px) {
+  .theory-page {
+    padding: 24px 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 12px);
+    gap: 16px;
+  }
+
+  .theory-selectors {
+    padding: 0 16px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .theory-selectors::-webkit-scrollbar {
+    display: none;
+  }
+
+  .theory-pill-row {
+    flex-wrap: nowrap;
+  }
+
+  .theory-chord-info {
+    padding: 0 16px;
+  }
+}
+
+/* ── Drill back button ─────────────────────────────────── */
 @media (max-width: 640px) {
   .drill {
     padding: 24px 0 0;
