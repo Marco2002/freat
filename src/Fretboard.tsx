@@ -6,6 +6,7 @@ import {
   STRING_THICKNESS,
   keyOf,
 } from './data';
+import { playNote } from './audio';
 
 const PAD_L = 60, PAD_R = 34, PAD_T = 40, PAD_B = 42;
 const FRET_W = 124, FRET_W_COMPACT = 72, STRING_GAP = 48;
@@ -117,10 +118,15 @@ export function Fretboard({ selected, targetKeys, phase, invert, onToggle, compa
           <g
             key={key}
             className={`note${isSuccess ? ' note-success' : ''}`}
-            style={{ cursor: phase === 'playing' ? 'pointer' : 'default' }}
-            onClick={() => onToggle(key)}
+            style={{ cursor: phase === 'playing' ? 'pointer' : 'default', touchAction: 'manipulation' }}
+            onPointerDown={(e) => {
+              if (phase !== 'playing') return;
+              e.preventDefault();
+              playNote(n.s, n.f);
+              onToggle(key);
+            }}
           >
-            <circle cx={x} cy={y} r={24} fill="rgba(0,0,0,0)" />
+            <rect x={x - fretW / 2} y={y - STRING_GAP / 2} width={fretW} height={STRING_GAP} fill="rgba(0,0,0,0)" />
             <circle cx={x} cy={y} r={17} fill={fill} stroke={stroke} strokeWidth={1.2} />
             {isRoot && (
               <circle cx={x} cy={y} r={5} fill={dotFill} style={{ pointerEvents: 'none' }} />

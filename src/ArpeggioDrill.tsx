@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { CHORDS, POSITION_NOTES, keyOf } from './data';
+import { playChord } from './audio';
 import { Fretboard } from './Fretboard';
 import type { Phase } from './Fretboard';
 
@@ -53,6 +54,7 @@ export function ArpeggioDrill() {
     for (const k of targetKeys) if (!selected.has(k)) return;
     setPhase('success');
     setStreak((s) => s + 1);
+    playChord(POSITION_NOTES.filter((n) => targetKeys.has(keyOf(n))).map(({ s, f }) => ({ string: s, fret: f })));
   }, [selected, phase, targetKeys]);
 
   // Advance to the next chord after the success flash
