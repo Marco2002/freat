@@ -3,9 +3,9 @@ import {
   STRING_LABELS,
   STRING_THICKNESS,
   keyOf,
-} from './data';
-import type { PositionNote } from './data';
-import { playNote } from './audio';
+} from '../lib/data';
+import type { PositionNote } from '../lib/data';
+import { playNote } from '../lib/audio';
 
 const PAD_L = 60, PAD_R = 34, PAD_T = 40, PAD_B = 42;
 const FRET_W = 124, FRET_W_COMPACT = 72, STRING_GAP = 48;

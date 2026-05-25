@@ -35,6 +35,33 @@ function scheduleNote(ctx: AudioContext, string: number, fret: number, startOffs
   osc.stop(now + duration);
 }
 
+function scheduleFreq(ctx: AudioContext, freq: number, startOffset = 0): void {
+  const now = ctx.currentTime + startOffset;
+  const duration = 2.0;
+  const osc = ctx.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.value = freq;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(freq * 20, now);
+  filter.frequency.exponentialRampToValueAtTime(freq * 2, now + 0.6);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.35, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + duration);
+}
+
+// noteIdx: 0=C, 1=C#, ..., 11=B. Plays at octave 4 by default (middle octave).
+export function playNoteByIndex(noteIdx: number, octave = 4): void {
+  const freq = 261.63 * Math.pow(2, (noteIdx + (octave - 4) * 12) / 12);
+  const ctx = getCtx();
+  ctx.resume().then(() => scheduleFreq(ctx, freq));
+}
+
 export function playNote(string: number, fret: number): void {
   const ctx = getCtx();
   ctx.resume().then(() => scheduleNote(ctx, string, fret));

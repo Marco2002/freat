@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { MenuPage } from './MenuPage';
-import { PositionSelect } from './PositionSelect';
-import { ArpeggioDrill } from './ArpeggioDrill';
-import { TheoryPage } from './TheoryPage';
+import { MenuPage } from './pages/MenuPage';
+import { PositionSelect } from './pages/PositionSelect';
+import { ArpeggioDrill } from './pages/ArpeggioDrill';
+import { TheoryPage } from './pages/TheoryPage';
+import { NoteFinderDrill } from './pages/NoteFinderDrill';
+import { NoteFinderTheory } from './pages/NoteFinderTheory';
 
-type Page = 'menu' | 'select' | 'drill' | 'theory';
+type Page = 'menu' | 'select' | 'drill' | 'theory' | 'note-finder' | 'note-finder-theory';
 
 export default function App() {
   const [page, setPage] = useState<Page>('menu');
@@ -24,7 +26,14 @@ export default function App() {
   };
 
   if (page === 'menu') {
-    return <MenuPage onPractice={() => setPage('select')} onTheory={() => setPage('theory')} />;
+    return (
+      <MenuPage
+        onPractice={() => setPage('select')}
+        onTheory={() => setPage('theory')}
+        onNoteFinderPractice={() => setPage('note-finder')}
+        onNoteFinderTheory={() => setPage('note-finder-theory')}
+      />
+    );
   }
 
   if (page === 'select') {
@@ -42,6 +51,14 @@ export default function App() {
 
   if (page === 'theory') {
     return <TheoryPage onBack={() => setPage('menu')} />;
+  }
+
+  if (page === 'note-finder') {
+    return <NoteFinderDrill onBack={() => setPage('menu')} />;
+  }
+
+  if (page === 'note-finder-theory') {
+    return <NoteFinderTheory onBack={() => setPage('menu')} />;
   }
 
   return (

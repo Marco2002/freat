@@ -2,10 +2,12 @@ import { defineConfig } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import { VitePWA } from 'vite-plugin-pwa'
+import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    tailwindcss(),
     react(),
     babel({ presets: [reactCompilerPreset()] }),
     VitePWA({
@@ -15,8 +17,8 @@ export default defineConfig({
         name: 'Arpeggio Drill',
         short_name: 'Arpeggio',
         description: 'Guitar arpeggio practice tool',
-        theme_color: '#0a0a0a',
-        background_color: '#0a0a0a',
+        theme_color: '#f0eee9',
+        background_color: '#f0eee9',
         display: 'standalone',
         scope: '/',
         start_url: '/',
