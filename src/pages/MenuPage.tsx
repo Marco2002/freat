@@ -6,6 +6,8 @@ interface MenuPageProps {
       or coming back out of a drill — reopens the menu on the same mode. */
   mode: Mode;
   onModeChange: (mode: Mode) => void;
+  /** Only the arpeggio side has a run to start, so this is optional. */
+  onGame?: () => void;
   onPractice: () => void;
   onTheory: () => void;
 }
@@ -76,6 +78,7 @@ function Dots({ active }: { active: Mode }) {
 export function MenuPage({
   mode,
   onModeChange,
+  onGame,
   onPractice,
   onTheory,
 }: MenuPageProps) {
@@ -166,10 +169,20 @@ export function MenuPage({
           </div>
         </div>
 
-        {/* Buttons — fixed in place, act on whichever mode is active */}
-        <div className="flex flex-col items-center gap-3">
+        {/* Buttons — fixed in place, act on whichever mode is active.
+            items-stretch makes every button as wide as the widest one, with no
+            hardcoded width to keep in step as the labels change. */}
+        <div className="flex flex-col items-stretch gap-3">
+          {onGame && (
+            <button
+              className="bg-ink text-sand border-none font-mono text-xs font-medium tracking-[0.14em] uppercase py-4 px-11 rounded-full cursor-pointer transition-opacity duration-150 hover:opacity-80"
+              onClick={onGame}
+            >
+              Play →
+            </button>
+          )}
           <button
-            className="bg-ink text-sand border-none font-mono text-xs font-medium tracking-[0.14em] uppercase py-4 px-11 rounded-full cursor-pointer transition-opacity duration-150 hover:opacity-80"
+            className="bg-sand text-ink border-[1.5px] border-ink/40 font-mono text-xs font-medium tracking-[0.14em] uppercase py-[14px] px-11 rounded-full cursor-pointer transition-all duration-150 hover:border-ink/65"
             onClick={onPractice}
           >
             Practice →

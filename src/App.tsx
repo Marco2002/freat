@@ -2,16 +2,25 @@ import { useState } from 'react';
 import { MenuPage } from './pages/MenuPage';
 import { PositionSelect } from './pages/PositionSelect';
 import { ArpeggioDrill } from './pages/ArpeggioDrill';
+import { GameSetup } from './pages/GameSetup';
+import { ArpeggioGame } from './pages/ArpeggioGame';
 import { TheoryPage } from './pages/TheoryPage';
 import { NoteFinderDrill } from './pages/NoteFinderDrill';
 import { NoteFinderTheory } from './pages/NoteFinderTheory';
 import { useRoute } from './hooks/useRoute';
 import { menuOf } from './lib/routes';
+import { RUN_CHORDS } from './lib/game';
 
 export default function App() {
   const [route, navigate] = useRoute();
   const [selectedPositionIds, setSelectedPositionIds] = useState<number[]>([3]);
   const [selectedChordIndices, setSelectedChordIndices] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
+  // The run's opening hand, chosen on the game setup screen.
+  const [runPositionId, setRunPositionId] = useState<number | null>(null);
+  const [runChordIndices, setRunChordIndices] = useState<number[]>([]);
+  // Bumped to start a fresh run on the same hand — remounting the game is what
+  // resets lives, score and clock.
+  const [runKey, setRunKey] = useState(0);
 
   const togglePosition = (id: number) => {
     setSelectedPositionIds((prev) =>
@@ -22,6 +31,16 @@ export default function App() {
   const toggleChord = (idx: number) => {
     setSelectedChordIndices((prev) =>
       prev.includes(idx) ? prev.filter((x) => x !== idx) : [...prev, idx]
+    );
+  };
+
+  const toggleRunChord = (idx: number) => {
+    setRunChordIndices((prev) =>
+      prev.includes(idx)
+        ? prev.filter((x) => x !== idx)
+        : prev.length < RUN_CHORDS
+          ? [...prev, idx]
+          : prev
     );
   };
 
@@ -36,6 +55,11 @@ export default function App() {
         // Flipping the carousel is not a new screen, so it replaces rather than
         // stacking an entry the back button would have to walk through.
         onModeChange={(next) => navigate(menuOf(next), true)}
+        onGame={
+          mode === 'arpeggio'
+            ? () => navigate({ screen: 'game-setup', mode })
+            : undefined
+        }
         onPractice={() =>
           navigate(
             mode === 'arpeggio'
@@ -44,6 +68,52 @@ export default function App() {
           )
         }
         onTheory={() => navigate({ screen: 'theory', mode })}
+      />
+    );
+  }
+
+  if (screen === 'game-setup') {
+    return (
+      <GameSetup
+        positionId={runPositionId}
+        onPickPosition={setRunPositionId}
+        chordIndices={runChordIndices}
+        onToggleChord={toggleRunChord}
+        onBack={backToMenu}
+        onStart={() => {
+          setRunKey((k) => k + 1);
+          navigate({ screen: 'game', mode });
+        }}
+      />
+    );
+  }
+
+  if (screen === 'game') {
+    // A run cannot be deep-linked into: reloading /arpeggio/game has no hand to
+    // play, so it falls back to choosing one.
+    if (runPositionId === null || runChordIndices.length !== RUN_CHORDS) {
+      return (
+        <GameSetup
+          positionId={runPositionId}
+          onPickPosition={setRunPositionId}
+          chordIndices={runChordIndices}
+          onToggleChord={toggleRunChord}
+          onBack={backToMenu}
+          onStart={() => {
+            setRunKey((k) => k + 1);
+            navigate({ screen: 'game', mode }, true);
+          }}
+        />
+      );
+    }
+    return (
+      <ArpeggioGame
+        key={runKey}
+        positionId={runPositionId}
+        chordIndices={runChordIndices}
+        onQuit={() => navigate({ screen: 'game-setup', mode })}
+        onPlayAgain={() => navigate({ screen: 'game-setup', mode })}
+        onMenu={backToMenu}
       />
     );
   }

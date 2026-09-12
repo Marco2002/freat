@@ -76,6 +76,10 @@ export const keyOf = (n: PositionNote): string => `${n.s}-${n.f}`;
 export const keysOf = (notes: PositionNote[]): Set<string> =>
   new Set(notes.map(keyOf));
 
+/** The notes of `chord` within a drawn position — what a drill asks for. */
+export const chordKeysIn = (notes: PositionNote[], chord: Chord): Set<string> =>
+  new Set(notes.filter((n) => chord.tones.includes(n.degree)).map(keyOf));
+
 // Semitones above the root → scale degree, for the major scale
 const DEGREE_BY_OFFSET = new Map<number, Degree>(
   MAJOR_INTERVALS.map((semitones, i) => [semitones, (i + 1) as Degree]),
@@ -173,6 +177,18 @@ export function placePosition(
 /** Where a position starts out, before the camera has gone anywhere. */
 export const initialPlacement = (number: number): Placement =>
   placePosition(positionById(number), positionById(number).frets[0]);
+
+/**
+ * The next position to drill, drawn at random from `ids` — the current one
+ * included, which simply leaves the neck where it is for another round. When it
+ * does move it goes to the copy nearest the neck already on screen, so any pair
+ * of positions is a short slide apart.
+ */
+export function nextPlacement(current: Placement, ids: number[]): Placement {
+  const id = ids[Math.floor(Math.random() * ids.length)];
+  if (id === current.id) return current;
+  return placePosition(positionById(id), current.frets[0]);
+}
 
 /**
  * The fret a drawn note is really fingered at, with the octaves the neck has

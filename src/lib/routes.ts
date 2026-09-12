@@ -8,7 +8,9 @@ export type Screen =
   | "menu"
   | "positions"
   | "drill"
-  | "theory";
+  | "theory"
+  | "game-setup"
+  | "game";
 
 /**
  * A screen, and which mode it belongs to. Carrying the mode on every route is
@@ -25,6 +27,8 @@ const ROUTES: readonly (Route & { path: string })[] = [
   { path: "/arpeggio/positions", screen: "positions", mode: "arpeggio" },
   { path: "/arpeggio/drill", screen: "drill", mode: "arpeggio" },
   { path: "/arpeggio/theory", screen: "theory", mode: "arpeggio" },
+  { path: "/arpeggio/game/setup", screen: "game-setup", mode: "arpeggio" },
+  { path: "/arpeggio/game", screen: "game", mode: "arpeggio" },
   { path: "/note-finder", screen: "menu", mode: "note-finder" },
   { path: "/note-finder/drill", screen: "drill", mode: "note-finder" },
   { path: "/note-finder/theory", screen: "theory", mode: "note-finder" },

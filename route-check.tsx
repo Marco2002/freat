@@ -40,6 +40,7 @@ const cases: [string, string][] = [
   ["/arpeggio/theory", ">Chord<"],
   ["/note-finder/drill", "grid-cols-4"],
   ["/note-finder/theory", "Scale Degrees"],
+  ["/arpeggio/game/setup", "Start run"],
 ];
 const rendered = new Map(cases.map(([p]) => [p, at(p)]));
 for (const [p, marker] of cases) {
@@ -75,6 +76,14 @@ const menu = at("/note-finder");
 check("menu at /note-finder shows the note-finder background", menu.includes("--color-slate"));
 check("menu at / shows the arpeggio background", at("/").includes("--color-sand"));
 check("menu at /note-finder is slid to the second title", menu.includes("-50%"));
+
+console.log("\nthe game routes:");
+check("/arpeggio/game/setup asks for one position", at("/arpeggio/game/setup").includes("pick one"));
+check("…and exactly 3 chords", at("/arpeggio/game/setup").includes("0/3"));
+// A run has no hand on a cold load, so the URL must not strand the player.
+check("/arpeggio/game with no hand falls back to setup", at("/arpeggio/game").includes("Start run"));
+check("the menu offers a game", at("/").includes("Play →"));
+check("…only on the arpeggio side", !at("/note-finder").includes("Play →"));
 
 console.log(failures === 0 ? "\nALL CHECKS PASSED" : `\n${failures} CHECK(S) FAILED`);
 if (failures) process.exit(1);

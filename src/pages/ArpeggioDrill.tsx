@@ -1,10 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   CHORDS,
+  chordKeysIn,
   initialPlacement,
-  keyOf,
   keysOf,
-  placePosition,
+  nextPlacement,
   positionById,
 } from "../lib/data";
 import type { Placement } from "../lib/data";
@@ -21,18 +21,6 @@ function pickNextChord(prevIdx: number, available: number[]): number {
     next = available[Math.floor(Math.random() * available.length)];
   } while (next === prevIdx);
   return next;
-}
-
-// Pick the next position at random from the ones selected — the same one
-// included, which simply leaves the neck where it is for another round.
-//
-// When it does move, the position is drawn wherever it lies nearest the neck
-// already on screen rather than at some fixed spot, so any pair of positions is
-// a short slide apart: that is what keeps 5 → 1 as close as 1 → 2.
-function nextPlacement(current: Placement, ids: number[]): Placement {
-  const id = ids[Math.floor(Math.random() * ids.length)];
-  if (id === current.id) return current;
-  return placePosition(positionById(id), current.frets[0]);
 }
 
 interface ArpeggioDrillProps {
@@ -74,10 +62,7 @@ export function ArpeggioDrill({
   const activeKeys = useMemo(() => keysOf(place.notes), [place]);
 
   const targetKeys = useMemo(
-    () =>
-      new Set(
-        place.notes.filter((n) => chord.tones.includes(n.degree)).map(keyOf),
-      ),
+    () => chordKeysIn(place.notes, chord),
     [place, chord],
   );
 

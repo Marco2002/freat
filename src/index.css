@@ -77,7 +77,216 @@
   100% { transform: scale(1); }
 }
 
+/* Last-seconds warning: a red vignette, one flash per remaining second. Each
+   flash is a separate element that plays this once, so the count is exact
+   rather than a loop that happens to be cut off. Drawn as an inset shadow so it
+   crowds the edges without tinting what the player is reading in the middle. */
+.panic-flash {
+  animation: panic 0.85s ease-out 1 forwards;
+  pointer-events: none;
+}
+@keyframes panic {
+  0% {
+    box-shadow: inset 0 0 0 0 rgba(185, 64, 64, 0);
+  }
+  18% {
+    box-shadow: inset 0 0 90px 18px rgba(185, 64, 64, 0.45);
+  }
+  100% {
+    box-shadow: inset 0 0 0 0 rgba(185, 64, 64, 0);
+  }
+}
+
+/* A lost heart splits down the middle and the halves tumble away, leaving the
+   empty outline behind. */
+.heart-shard {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-duration: 0.75s;
+  animation-timing-function: cubic-bezier(0.3, 0.6, 0.4, 1);
+  animation-fill-mode: forwards;
+}
+.heart-shard-l {
+  animation-name: shard-left;
+}
+.heart-shard-r {
+  animation-name: shard-right;
+}
+@keyframes shard-left {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  18% {
+    transform: translate(-0.6px, -1.4px) rotate(-5deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-5px, 9px) rotate(-42deg);
+    opacity: 0;
+  }
+}
+@keyframes shard-right {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  18% {
+    transform: translate(0.6px, -1.4px) rotate(5deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(5px, 9px) rotate(42deg);
+    opacity: 0;
+  }
+}
+
+/* Modifier cards drift in, then hang and bob gently — floating, so they read
+   as something offered rather than part of the page. */
+.modifier-card {
+  animation:
+    card-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) backwards,
+    card-float 4.5s ease-in-out infinite;
+  /* --card-delay staggers the deal; the float starts once that card has
+     landed, so the two never fight over the transform. */
+  animation-delay: var(--card-delay, 0ms), calc(var(--card-delay, 0ms) + 0.45s);
+  /* Two real faces, so a turning card shows its back rather than its own
+     content mirrored. */
+  transform-style: preserve-3d;
+}
+
+.card-spinner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 10px 26px -14px rgba(41, 38, 27, 0.45);
+}
+.card-back {
+  transform: rotateY(180deg);
+}
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes card-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* The table the cards are dealt on. The perspective lives here so the chosen
+   card spins in depth rather than flattening as it turns. */
+.modifier-table {
+  perspective: 1100px;
+}
+
+/* Picking one: the rest drop away... */
+.card-dismissed {
+  animation: card-out 0.32s ease-in forwards;
+  pointer-events: none;
+}
+@keyframes card-out {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.92);
+  }
+}
+
+/* ...and the one taken flies to the middle of the screen, spinning like a card
+   flicked off a deck, then away into the run. --dx/--dy are measured at the
+   moment of the tap, so it lands dead centre from wherever it was dealt.
+   The flight and the spin are two elements rather than one: a single transform
+   would force the turn to share the flight's easing, which makes it lurch. */
+.card-chosen {
+  animation: card-take 0.85s cubic-bezier(0.3, 0.7, 0.3, 1) forwards;
+  z-index: 2;
+  will-change: transform, opacity;
+}
+@keyframes card-take {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  70% {
+    transform: translate(var(--dx), var(--dy)) scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(1.22);
+    opacity: 0;
+  }
+}
+
+/* Three even turns, at one constant speed from first frame to last. */
+.card-chosen .card-spinner {
+  animation: card-spin 0.85s linear forwards;
+}
+@keyframes card-spin {
+  to {
+    transform: rotateY(1080deg);
+  }
+}
+
+/* The backdrop clears with it. */
+.modifier-taken {
+  animation: fade-out 0.85s ease-in forwards;
+  pointer-events: none;
+}
+@keyframes fade-out {
+  0%,
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* Cards appear, but neither fly nor bob. */
+  .modifier-card {
+    animation: none;
+  }
+  /* The pick still resolves, without the flight or the spin. */
+  .card-chosen,
+  .card-chosen .card-spinner,
+  .modifier-taken {
+    animation: none;
+  }
+  .card-dismissed {
+    animation: none;
+    opacity: 0;
+  }
+
+  /* Keep the warning, drop the pulsing: a steady edge instead of a flash. */
+  .panic-flash {
+    animation: none;
+    box-shadow: inset 0 0 70px 14px rgba(185, 64, 64, 0.3);
+  }
+  /* The heart still goes; it just does not tumble. */
+  .heart-shard {
+    animation: none;
+    opacity: 0;
+  }
+
   /* duration is set inline per-slide, so this needs to win */
   .neck-slide {
     transition-duration: 0ms !important;

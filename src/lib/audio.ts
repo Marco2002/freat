@@ -98,6 +98,37 @@ export function playNote(string: number, fret: number): void {
   ctx.resume().then(() => pluck(ctx, freq));
 }
 
+/**
+ * A short, dry blip for the countdown — deliberately unlike the plucked
+ * strings, so it reads as the clock rather than as a note the player hit. The
+ * `urgency` (0–1) raises the pitch and bite as the last seconds run out.
+ */
+export function playTick(urgency = 0): void {
+  const ctx = getCtx();
+  ctx.resume().then(() => {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(660 + 220 * urgency, now);
+    // A quick downward chirp gives it a knock rather than a beep.
+    osc.frequency.exponentialRampToValueAtTime(
+      330 + 110 * urgency,
+      now + 0.09,
+    );
+
+    const gain = ctx.createGain();
+    const peak = 0.1 + 0.12 * urgency;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(peak, now + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.18);
+  });
+}
+
 export function playChord(notes: { string: number; fret: number }[]): void {
   const ctx = getCtx();
   const sorted = [...notes].sort((a, b) => a.string - b.string);
