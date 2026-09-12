@@ -3,7 +3,8 @@ import {
   BOSS_INTERVAL,
   BOSS_KINDS,
   availableBosses,
-  conflictsWith,
+  pruneBosses,
+  requires,
   MAX_RUSH,
   hasBoss,
   hiddenDegrees,
@@ -307,7 +308,7 @@ console.log("\nPentatonic Only: 4 and 7 go dark but stay in play:");
   check("…and a wrong tap on a dark note still costs a life", slip.lives === 2 && slip.phase === "wrong");
 }
 
-console.log("\nRoot Only, and its quarrel with Pentatonic Only:");
+console.log("\nRoot Only, the step up from Pentatonic Only:");
 {
   const clean = fresh();
   const rootOnly: RunState = { ...clean, bosses: ["root"] };
@@ -322,29 +323,42 @@ console.log("\nRoot Only, and its quarrel with Pentatonic Only:");
   check("a dark note is still a normal tap",
     runReducer(rootOnly, { type: "toggle", key: "3-10", isTarget: true }).selected.has("3-10"));
 
-  // Mutual exclusion, from either side.
-  check("with Pentatonic Only in force, Root Only is not on the table",
-    !availableBosses({ ...clean, bosses: ["pentatonic"] }).includes("root"));
-  check("with Root Only in force, Pentatonic Only is not on the table",
-    !availableBosses(rootOnly).includes("pentatonic"));
-  check("No Mistakes is still available alongside either",
-    availableBosses(rootOnly).includes("strict") &&
-      availableBosses({ ...clean, bosses: ["pentatonic"] }).includes("strict"));
-  check("they name each other as conflicts",
-    conflictsWith("pentatonic").includes("root") && conflictsWith("root").includes("pentatonic"));
-  check("No Mistakes conflicts with nothing", conflictsWith("strict").length === 0);
+  // Root Only is the step up: it cannot land until Pentatonic Only has.
+  check("on a fresh run, Root Only is not on the table",
+    !availableBosses(clean).includes("root"));
+  check("Pentatonic Only is, from the start",
+    availableBosses(clean).includes("pentatonic"));
+  check("once Pentatonic Only is in force, Root Only unlocks",
+    availableBosses({ ...clean, bosses: ["pentatonic"] }).includes("root"));
+  check("No Mistakes needs nothing first",
+    availableBosses(clean).includes("strict") && requires("strict").length === 0);
+  check("Root Only names its prerequisite",
+    requires("root").includes("pentatonic"));
+  check("Pentatonic Only has none", requires("pentatonic").length === 0);
+  check("the two stack — Root Only simply hides more",
+    hiddenDegrees({ ...clean, bosses: ["pentatonic", "root"] }).length === 6);
 
-  // No run can ever end up holding both.
-  let bothSeen = 0;
+  // Switching off a prerequisite in practice cannot leave an orphan behind.
+  check("dropping Pentatonic Only drops Root Only with it",
+    pruneBosses(["strict", "root"]).join() === "strict");
+  check("…and leaves a valid set alone",
+    pruneBosses(["strict", "pentatonic", "root"]).length === 3);
+
+  // No run can ever reach Root Only the wrong way round.
+  let outOfOrder = 0;
   for (let run = 0; run < 300; run++) {
     let s = fresh();
+    const order: string[] = [];
     for (let i = 0; i < 130; i++) {
       s = settle(s, true, T0 + i * 40000);
+      if (s.stage === "boss") order.push(modifierId(s.offers[0]));
       if (s.stage !== "running") s = runReducer(s, { type: "choose", modifier: s.offers[0], at: T0 });
     }
-    if (s.bosses.includes("pentatonic") && s.bosses.includes("root")) bothSeen++;
+    const pent = order.indexOf("boss-pentatonic");
+    const root = order.indexOf("boss-root");
+    if (root !== -1 && (pent === -1 || pent > root)) outOfOrder++;
   }
-  check(`300 full runs, never both at once (${bothSeen})`, bothSeen === 0);
+  check(`300 full runs, Root Only never arrives first (${outOfOrder})`, outOfOrder === 0);
 }
 
 console.log("\nprevews follow the rules: a hidden degree is not drawn:");
@@ -367,14 +381,14 @@ console.log("\nprevews follow the rules: a hidden degree is not drawn:");
 console.log("\nbosses take their turn:");
 {
   check(`there are ${BOSS_KINDS.length} bosses`, BOSS_KINDS.length === 3);
-  check(`a run can hold ${MAX_BOSSES} of them — the exclusive pair sees to that`,
-    MAX_BOSSES === 2);
+  check(`a run can end up holding all ${MAX_BOSSES}`, MAX_BOSSES === 3);
   const seen = new Set<string>();
-  // Bosses land on pauses 4 and 8, so a run needs 8 pauses — 80 drills — for
-  // both to be in force.
+  // Bosses land every 4th pause, so a run needs MAX_BOSSES * 4 pauses — and ten
+  // drills per pause — before the last of them is in force.
+  const drillsToFill = MAX_BOSSES * BOSS_INTERVAL * 10;
   for (let run = 0; run < 200; run++) {
     let s = fresh();
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < drillsToFill; i++) {
       s = settle(s, true, T0 + i * 40000);
       if (s.stage !== "running") {
         if (s.stage === "boss") seen.add(modifierId(s.offers[0]));

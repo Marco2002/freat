@@ -14,18 +14,38 @@ export const BOSS_KINDS: readonly BossKind[] = [
 ];
 
 /**
- * Rules that cannot both be in force. Pentatonic Only and Root Only both thin
- * out the neck, and the harsher one would simply swallow the other.
+ * Rules that have to be in force before another can land. Root Only is the step
+ * up from Pentatonic Only — the neck thins to five degrees, then to one — so it
+ * only ever arrives after it.
  */
-const BOSS_CONFLICTS: Record<BossKind, readonly BossKind[]> = {
+const BOSS_REQUIRES: Record<BossKind, readonly BossKind[]> = {
   strict: [],
-  pentatonic: ["root"],
+  pentatonic: [],
   root: ["pentatonic"],
 };
 
-/** Rules `boss` cannot sit alongside. */
-export const conflictsWith = (boss: BossKind): readonly BossKind[] =>
-  BOSS_CONFLICTS[boss];
+/** What has to be in force first. */
+export const requires = (boss: BossKind): readonly BossKind[] =>
+  BOSS_REQUIRES[boss];
+
+/** Can this rule land yet? */
+export const isUnlocked = (loadout: RunLoadout, boss: BossKind): boolean =>
+  BOSS_REQUIRES[boss].every((r) => loadout.bosses.includes(r));
+
+/**
+ * Drops any rule left without its prerequisite — switching one off in practice
+ * has to take whatever was built on top of it too.
+ */
+export function pruneBosses(bosses: readonly BossKind[]): BossKind[] {
+  let kept = [...bosses];
+  for (;;) {
+    const next = kept.filter((b) =>
+      BOSS_REQUIRES[b].every((r) => kept.includes(r)),
+    );
+    if (next.length === kept.length) return next;
+    kept = next;
+  }
+}
 
 /**
  * What a run picks up along the way. Each one makes the run harder: less time,
@@ -59,14 +79,9 @@ export interface RunLoadout {
 export const hasBoss = (loadout: RunLoadout, boss: BossKind): boolean =>
   loadout.bosses.includes(boss);
 
-/** Bosses that could still be imposed: not already in force, and not ruled out
- *  by one that is. */
+/** Bosses that could still be imposed: not already in force, and unlocked. */
 export const availableBosses = (loadout: RunLoadout): BossKind[] =>
-  BOSS_KINDS.filter(
-    (b) =>
-      !loadout.bosses.includes(b) &&
-      !BOSS_CONFLICTS[b].some((other) => loadout.bosses.includes(other)),
-  );
+  BOSS_KINDS.filter((b) => !loadout.bosses.includes(b) && isUnlocked(loadout, b));
 
 /**
  * Whether the pause after `picksSoFar` modifiers is a boss. Every fourth one,
@@ -171,7 +186,7 @@ export const BOSS_INFO: Record<
     name: "Root Only",
     detail: "Only the root is marked — every other degree goes dark",
     blurb:
-      "One note to navigate from. The rest of the shape is still under your fingers, unmarked.",
+      "The step up from Pentatonic Only: one note to navigate from. The rest of the shape is still under your fingers, unmarked.",
   },
 };
 

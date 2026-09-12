@@ -10,7 +10,7 @@ import { NoteFinderTheory } from './pages/NoteFinderTheory';
 import { useRoute } from './hooks/useRoute';
 import { menuOf } from './lib/routes';
 import { RUN_CHORDS } from './lib/game';
-import { conflictsWith } from './lib/modifiers';
+import { isUnlocked, pruneBosses } from './lib/modifiers';
 import type { BossKind } from './lib/modifiers';
 
 export default function App() {
@@ -40,11 +40,12 @@ export default function App() {
 
   const toggleBoss = (boss: BossKind) => {
     setPracticeBosses((prev) => {
-      if (prev.includes(boss)) return prev.filter((b) => b !== boss);
-      // Switching on a rule switches off any it cannot sit alongside, rather
-      // than refusing the tap.
-      const ousted = conflictsWith(boss);
-      return [...prev.filter((b) => !ousted.includes(b)), boss];
+      // Switching one off takes anything built on top of it with it, so the
+      // set of rules is always one a run could actually reach.
+      if (prev.includes(boss))
+        return pruneBosses(prev.filter((b) => b !== boss));
+      const loadout = { positions: [], roster: [], rushRank: 0, bosses: prev };
+      return isUnlocked(loadout, boss) ? [...prev, boss] : prev;
     });
   };
 

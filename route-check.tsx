@@ -82,6 +82,11 @@ check("practice setup offers the rules row", at("/arpeggio/positions").includes(
 check("…with every boss named",
   ["No Mistakes", "Pentatonic Only", "Root Only"].every((n) =>
     at("/arpeggio/positions").includes(n)));
+// Root Only is a step up, so it starts out locked behind its prerequisite.
+check("Root Only starts locked, and says what it needs",
+  at("/arpeggio/positions").includes("needs Pentatonic Only"));
+check("…and is genuinely not pressable",
+  at("/arpeggio/positions").includes("disabled"));
 check("…and its effect spelled out",
   at("/arpeggio/positions").includes("A wrong note costs a life and ends the drill"));
 check("the game setup screen does not — a run imposes its own",
