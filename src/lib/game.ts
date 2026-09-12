@@ -1,7 +1,14 @@
 import { initialPlacement, nextPlacement } from "./data";
 import type { Placement } from "./data";
-import { applyModifier, drillSeconds, rollOffers } from "./modifiers";
-import type { Modifier } from "./modifiers";
+import {
+  applyModifier,
+  availableBosses,
+  drillSeconds,
+  hasBoss,
+  isBossPause,
+  rollOffers,
+} from "./modifiers";
+import type { BossKind, Modifier } from "./modifiers";
 
 // A run: the arpeggio drill played for keeps. Lives, a clock on every drill,
 // and a loadout that starts small — modifiers grow it, and tighten the clock,
@@ -25,8 +32,8 @@ export const PANIC_SECONDS = 3;
 /** Fraction of the clock left where the bar turns fully red. */
 export const DANGER_FRACTION = 0.25;
 
-export type DrillPhase = "playing" | "success" | "timeout";
-export type RunStage = "running" | "modifier" | "over";
+export type DrillPhase = "playing" | "success" | "timeout" | "wrong";
+export type RunStage = "running" | "modifier" | "boss" | "over";
 
 export interface RunState {
   /** Positions the run draws from — modifiers add to this. */
@@ -35,6 +42,8 @@ export interface RunState {
   roster: number[];
   /** Rank of the Rush modifier, which sets the clock. */
   rushRank: number;
+  /** Rules the run has had imposed on it. */
+  bosses: BossKind[];
   /** Where the neck is sitting. */
   place: Placement;
   chordIdx: number;
@@ -55,7 +64,9 @@ export interface RunState {
 }
 
 export type RunAction =
-  | { type: "toggle"; key: string }
+  /** `isTarget` says whether the tapped note belongs to the arpeggio — the
+      component knows the shape, so the rule stays a plain decision here. */
+  | { type: "toggle"; key: string; isTarget: boolean }
   | { type: "solved" }
   | { type: "expired" }
   | { type: "advance"; at: number }
@@ -83,6 +94,7 @@ export function initialRun(
     positions: [positionId],
     roster,
     rushRank: 0,
+    bosses: [],
     place: initialPlacement(positionId),
     chordIdx: roster[Math.floor(Math.random() * roster.length)],
     selected: new Set(),
@@ -123,6 +135,16 @@ export function runReducer(state: RunState, action: RunAction): RunState {
   switch (action.type) {
     case "toggle": {
       if (state.phase !== "playing" || state.stage !== "running") return state;
+      // Under No Mistakes a note outside the arpeggio ends the drill there and
+      // then. The wrong note is left showing, so the player sees what they hit.
+      if (!action.isTarget && hasBoss(state, "strict")) {
+        return {
+          ...state,
+          phase: "wrong",
+          lives: state.lives - 1,
+          selected: new Set(state.selected).add(action.key),
+        };
+      }
       const selected = new Set(state.selected);
       if (selected.has(action.key)) selected.delete(action.key);
       else selected.add(action.key);
@@ -143,10 +165,23 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       const drills = state.drills + 1;
       if (state.lives <= 0) return { ...state, drills, stage: "over" };
 
-      // A modifier is owed every so many drills. A run that has somehow taken
-      // everything on offer plays straight on rather than pausing on an empty
-      // table.
+      // A modifier is owed every so many drills. Every fourth one is a boss:
+      // not offered, imposed. A run that has somehow taken everything plays
+      // straight on rather than pausing on an empty table.
       if (drills % MODIFIER_INTERVAL === 0) {
+        if (isBossPause(state.taken.length)) {
+          const bosses = availableBosses(state);
+          if (bosses.length > 0) {
+            const boss = bosses[Math.floor(Math.random() * bosses.length)];
+            return {
+              ...state,
+              drills,
+              stage: "boss",
+              offers: [{ kind: "boss", boss }],
+            };
+          }
+          // Every boss already in force — fall through to an ordinary pick.
+        }
         const offers = rollOffers(state, MODIFIER_CHOICES);
         if (offers.length > 0) {
           return { ...state, drills, stage: "modifier", offers };
@@ -156,7 +191,7 @@ export function runReducer(state: RunState, action: RunAction): RunState {
     }
 
     case "choose": {
-      if (state.stage !== "modifier") return state;
+      if (state.stage !== "modifier" && state.stage !== "boss") return state;
       // The clock only starts once the player is looking at a drill again, so
       // reading the cards costs nothing.
       return {

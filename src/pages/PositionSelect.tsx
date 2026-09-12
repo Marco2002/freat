@@ -1,13 +1,18 @@
 import { POSITIONS } from "../lib/data";
 import { PositionCard } from "../components/PositionCard";
 import { ChordPills } from "../components/ChordPills";
+import { BossPills } from "../components/BossPills";
 import { useInvertSetting } from "../hooks/useInvertSetting";
+import { hiddenDegrees } from "../lib/modifiers";
+import type { BossKind } from "../lib/modifiers";
 
 interface PositionSelectProps {
   selected: number[];
   onToggle: (id: number) => void;
   selectedChordIndices: number[];
   onToggleChord: (idx: number) => void;
+  bosses: BossKind[];
+  onToggleBoss: (boss: BossKind) => void;
   onBack: () => void;
   onStart: () => void;
 }
@@ -17,10 +22,20 @@ export function PositionSelect({
   onToggle,
   selectedChordIndices,
   onToggleChord,
+  bosses,
+  onToggleBoss,
   onBack,
   onStart,
 }: PositionSelectProps) {
   const [invert] = useInvertSetting();
+  // The previews show what the switched-on rules will actually leave on the
+  // neck, so the picker and the drill never disagree.
+  const hidden = hiddenDegrees({
+    positions: [],
+    roster: [],
+    rushRank: 0,
+    bosses,
+  });
 
   return (
     <div className="h-full max-w-[560px] mx-auto px-6 pt-12 pb-8 flex flex-col gap-5 overflow-hidden max-sm:px-4 max-sm:pt-8 max-sm:pb-5">
@@ -43,6 +58,13 @@ export function PositionSelect({
         <ChordPills selected={selectedChordIndices} onToggle={onToggleChord} />
       </div>
 
+      <div className="flex flex-col gap-2.5">
+        <div className="font-mono text-[10.5px] font-medium tracking-[0.14em] uppercase text-muted-light">
+          Rules
+        </div>
+        <BossPills selected={bosses} onToggle={onToggleBoss} />
+      </div>
+
       <div className="flex flex-col gap-2.5 flex-1 overflow-hidden">
         <div className="font-mono text-[10.5px] font-medium tracking-[0.14em] uppercase text-muted-light">
           Positions
@@ -54,6 +76,7 @@ export function PositionSelect({
               position={pos}
               selected={selected.includes(pos.number)}
               invert={invert}
+              hiddenDegrees={hidden}
               onClick={() => onToggle(pos.number)}
             />
           ))}

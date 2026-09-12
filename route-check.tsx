@@ -77,6 +77,16 @@ check("menu at /note-finder shows the note-finder background", menu.includes("--
 check("menu at / shows the arpeggio background", at("/").includes("--color-sand"));
 check("menu at /note-finder is slid to the second title", menu.includes("-50%"));
 
+console.log("\nboss rules on the practice setup screen:");
+check("practice setup offers the rules row", at("/arpeggio/positions").includes("Rules"));
+check("…with every boss named",
+  ["No Mistakes", "Pentatonic Only", "Root Only"].every((n) =>
+    at("/arpeggio/positions").includes(n)));
+check("…and its effect spelled out",
+  at("/arpeggio/positions").includes("A wrong note costs a life and ends the drill"));
+check("the game setup screen does not — a run imposes its own",
+  !at("/arpeggio/game/setup").includes("No Mistakes"));
+
 console.log("\nthe game routes:");
 check("/arpeggio/game/setup asks for one position", at("/arpeggio/game/setup").includes("pick one"));
 check("…and exactly 3 chords", at("/arpeggio/game/setup").includes("0/3"));

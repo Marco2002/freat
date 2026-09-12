@@ -1,6 +1,13 @@
-import { CHORDS, POSITIONS } from "./src/lib/data";
+import { CHORDS, PENTATONIC_DEGREES, POSITIONS } from "./src/lib/data";
 import {
+  BOSS_INTERVAL,
+  BOSS_KINDS,
+  availableBosses,
+  conflictsWith,
   MAX_RUSH,
+  hasBoss,
+  hiddenDegrees,
+  isBossPause,
   RUSH_SECONDS,
   applyModifier,
   availableModifiers,
@@ -9,7 +16,7 @@ import {
   modifierInfo,
   rollOffers,
 } from "./src/lib/modifiers";
-import type { Modifier, RunLoadout } from "./src/lib/modifiers";
+import type { BossKind, Modifier, RunLoadout } from "./src/lib/modifiers";
 import {
   MODIFIER_CHOICES,
   MODIFIER_INTERVAL,
@@ -27,6 +34,16 @@ const check = (label: string, ok: boolean) => {
 };
 
 const T0 = 1_000_000;
+
+/** The most rules a single run can end up holding, given their conflicts. */
+const MAX_BOSSES = (() => {
+  let loadout: RunLoadout = { positions: [], roster: [], rushRank: 0, bosses: [] };
+  for (;;) {
+    const next = availableBosses(loadout)[0];
+    if (!next) return loadout.bosses.length;
+    loadout = { ...loadout, bosses: [...loadout.bosses, next] };
+  }
+})();
 const fresh = () => initialRun(3, [0, 3, 4], T0);
 const settle = (s: RunState, clear: boolean, at: number) =>
   runReducer(runReducer(s, { type: clear ? "solved" : "expired" }), { type: "advance", at });
@@ -137,7 +154,7 @@ console.log("\na position modifier really widens the neck:");
   const seen = new Set<number>();
   for (let i = 0; i < 400; i++) {
     s = settle(s, true, T0 + i * 40000);
-    if (s.stage === "modifier") s = runReducer(s, { type: "choose", modifier: s.offers[0], at: T0 });
+    if (s.stage !== "running") s = runReducer(s, { type: "choose", modifier: s.offers[0], at: T0 });
     seen.add(s.place.id);
   }
   check(`drills land on more than one position (${[...seen].sort().join(", ")})`, seen.size > 1);
@@ -154,7 +171,7 @@ console.log("\na chord modifier really widens the roster:");
   const seen = new Set<number>();
   for (let i = 0; i < 400; i++) {
     s = settle(s, true, T0 + i * 40000);
-    if (s.stage === "modifier") s = runReducer(s, { type: "choose", modifier: s.offers[0], at: T0 });
+    if (s.stage !== "running") s = runReducer(s, { type: "choose", modifier: s.offers[0], at: T0 });
     seen.add(s.chordIdx);
   }
   check(`the new chord is drilled (${[...seen].sort().join(", ")})`, seen.has(6));
@@ -166,8 +183,8 @@ console.log("\na long run keeps working as the pool empties:");
   let s = fresh();
   for (let i = 0; i < 300; i++) {
     s = settle(s, true, T0 + i * 40000);
-    if (s.stage === "modifier") {
-      check(`  pause at drill ${s.drills} has cards`, s.offers.length > 0);
+    if (s.stage === "modifier" || s.stage === "boss") {
+      check(`  pause at drill ${s.drills} (${s.stage}) has cards`, s.offers.length > 0);
       s = runReducer(s, { type: "choose", modifier: s.offers[0], at: T0 + i * 40000 });
     }
   }
@@ -175,6 +192,209 @@ console.log("\na long run keeps working as the pool empties:");
   check("never took the same one twice",
     new Set(s.taken.map(modifierId)).size === s.taken.length);
   check(`clock bottomed out at ${drillMs(s) / 1000}s`, drillMs(s) === 5000);
+}
+
+console.log("\nevery 4th pause is a boss, not a choice:");
+{
+  check("pauses 1-3 are ordinary", [0, 1, 2].every((n) => !isBossPause(n)));
+  check("pause 4 is a boss", isBossPause(3));
+  check("pauses 5-7 are ordinary", [4, 5, 6].every((n) => !isBossPause(n)));
+  check("pause 8 is a boss", isBossPause(7));
+
+  // Walk a real run and record what each pause turns out to be.
+  let s = fresh();
+  const kinds: string[] = [];
+  for (let i = 0; i < 130; i++) {
+    s = settle(s, true, T0 + i * 40000);
+    if (s.stage !== "running") {
+      kinds.push(s.stage === "boss" ? "BOSS" : "pick");
+      check(`  pause ${kinds.length} (${s.stage}) has something on the table`, s.offers.length > 0);
+      if (s.stage === "boss") {
+        check(`  …and it is a single boss card`,
+          s.offers.length === 1 && s.offers[0].kind === "boss");
+      } else {
+        check(`  …and no boss is mixed into a choice`,
+          !s.offers.some((m) => m.kind === "boss"));
+      }
+      s = runReducer(s, { type: "choose", modifier: s.offers[0], at: T0 + i * 40000 });
+    }
+  }
+  // Every 4th pause, and only those, is a boss — for as long as bosses remain.
+  const bossPauses = kinds.flatMap((k, i) => (k === "BOSS" ? [i + 1] : []));
+  check(`the run went ${kinds.join(", ")}`,
+    bossPauses.every((n) => n % BOSS_INTERVAL === 0));
+  check(`bosses landed on pauses ${bossPauses.join(", ")}`,
+    bossPauses.length === Math.min(MAX_BOSSES, Math.floor(kinds.length / BOSS_INTERVAL)));
+  check("no boss is imposed twice", new Set(s.bosses).size === s.bosses.length);
+  check(`the run fills up on rules (${s.bosses.join(", ")})`,
+    s.bosses.length === MAX_BOSSES);
+  check("once no rule can still be imposed, a 4th pause falls back to a choice",
+    kinds.length > MAX_BOSSES * BOSS_INTERVAL
+      ? kinds.slice(MAX_BOSSES * BOSS_INTERVAL).every((k) => k === "pick")
+      : true);
+}
+
+console.log("\nNo Mistakes: a wrong note costs a life and ends the drill:");
+{
+  const clean = fresh();
+  check("without the boss, a wrong note is just a tap",
+    runReducer(clean, { type: "toggle", key: "9-9", isTarget: false }).lives === 3);
+  check("…and can be tapped off again",
+    runReducer(runReducer(clean, { type: "toggle", key: "9-9", isTarget: false }),
+      { type: "toggle", key: "9-9", isTarget: false }).selected.size === 0);
+
+  const strict: RunState = { ...clean, bosses: ["strict"] };
+  const hit = runReducer(strict, { type: "toggle", key: "9-9", isTarget: false });
+  check("with the boss, it costs a life", hit.lives === 2);
+  check("…the drill ends", hit.phase === "wrong");
+  check("…and the wrong note is left showing", hit.selected.has("9-9"));
+  check("…scoring nothing", hit.score === 0);
+
+  check("a right note is still just a tap",
+    runReducer(strict, { type: "toggle", key: "2-9", isTarget: true }).phase === "playing");
+  check("…and clearing the drill still scores",
+    runReducer(strict, { type: "solved" }).score === 1);
+
+  check("a second wrong tap cannot cost another life",
+    runReducer(hit, { type: "toggle", key: "8-8", isTarget: false }).lives === 2);
+  const moved = runReducer(hit, { type: "advance", at: T0 + 1000 });
+  check("the run moves to the next arpeggio", moved.phase === "playing" && moved.selected.size === 0);
+  check("…with a fresh clock", remainingMs(moved, T0 + 1000) === drillMs(moved));
+
+  // Three wrong notes end a run just as three timeouts do.
+  let s: RunState = { ...fresh(), bosses: ["strict"] };
+  for (let i = 0; i < 3; i++) {
+    s = runReducer(s, { type: "toggle", key: "9-9", isTarget: false });
+    s = runReducer(s, { type: "advance", at: T0 + i * 1000 });
+  }
+  check("three wrong notes end the run", s.stage === "over" && s.lives === 0);
+}
+
+console.log("\nPentatonic Only: 4 and 7 go dark but stay in play:");
+{
+  const clean = fresh();
+  check("without the boss, nothing is hidden", hiddenDegrees(clean).length === 0);
+
+  const pent: RunState = { ...clean, bosses: ["pentatonic"] };
+  const hidden = hiddenDegrees(pent);
+  check(`it hides exactly the 4th and 7th (${hidden.join(", ")})`,
+    hidden.length === 2 && hidden.includes(4) && hidden.includes(7));
+  check("the five pentatonic degrees stay marked",
+    PENTATONIC_DEGREES.every((d) => !hidden.includes(d)));
+  check("hidden and shown together are the whole scale",
+    new Set([...PENTATONIC_DEGREES, ...hidden]).size === 7);
+
+  // Hiding is display only — the notes are still there to be tapped, and a
+  // hidden note is still a legitimate part of an arpeggio.
+  check("a hidden note is still a normal tap",
+    runReducer(pent, { type: "toggle", key: "3-10", isTarget: true }).selected.has("3-10"));
+  check("…and still scores when the drill is cleared",
+    runReducer(pent, { type: "solved" }).score === 1);
+  check("nothing about the clock changes", drillMs(pent) === drillMs(clean));
+  check("the roster and positions are untouched",
+    pent.roster.join() === clean.roster.join() &&
+      pent.positions.join() === clean.positions.join());
+
+  // Chords built on the hidden degrees are exactly where the difficulty lands.
+  const usesHidden = CHORDS.filter((c) => c.tones.some((t) => hidden.includes(t)));
+  check(`${usesHidden.length} of the 7 chords reach a hidden degree (${usesHidden.map((c) => c.rank).join(", ")})`,
+    usesHidden.length > 0);
+
+  // Both rules at once is a valid run, not a conflict.
+  const both: RunState = { ...clean, bosses: ["strict", "pentatonic"] };
+  check("it stacks with No Mistakes", hiddenDegrees(both).length === 2 && hasBoss(both, "strict"));
+  const slip = runReducer(both, { type: "toggle", key: "9-9", isTarget: false });
+  check("…and a wrong tap on a dark note still costs a life", slip.lives === 2 && slip.phase === "wrong");
+}
+
+console.log("\nRoot Only, and its quarrel with Pentatonic Only:");
+{
+  const clean = fresh();
+  const rootOnly: RunState = { ...clean, bosses: ["root"] };
+  const hidden = hiddenDegrees(rootOnly);
+  check(`it hides all six non-root degrees (${hidden.join(", ")})`,
+    hidden.length === 6 && !hidden.includes(1));
+  check("the root stays marked", !hidden.includes(1));
+  check("it is harsher than Pentatonic Only",
+    hidden.length > hiddenDegrees({ ...clean, bosses: ["pentatonic"] }).length);
+  check("nothing else about the run changes",
+    drillMs(rootOnly) === drillMs(clean) && rootOnly.roster.join() === clean.roster.join());
+  check("a dark note is still a normal tap",
+    runReducer(rootOnly, { type: "toggle", key: "3-10", isTarget: true }).selected.has("3-10"));
+
+  // Mutual exclusion, from either side.
+  check("with Pentatonic Only in force, Root Only is not on the table",
+    !availableBosses({ ...clean, bosses: ["pentatonic"] }).includes("root"));
+  check("with Root Only in force, Pentatonic Only is not on the table",
+    !availableBosses(rootOnly).includes("pentatonic"));
+  check("No Mistakes is still available alongside either",
+    availableBosses(rootOnly).includes("strict") &&
+      availableBosses({ ...clean, bosses: ["pentatonic"] }).includes("strict"));
+  check("they name each other as conflicts",
+    conflictsWith("pentatonic").includes("root") && conflictsWith("root").includes("pentatonic"));
+  check("No Mistakes conflicts with nothing", conflictsWith("strict").length === 0);
+
+  // No run can ever end up holding both.
+  let bothSeen = 0;
+  for (let run = 0; run < 300; run++) {
+    let s = fresh();
+    for (let i = 0; i < 130; i++) {
+      s = settle(s, true, T0 + i * 40000);
+      if (s.stage !== "running") s = runReducer(s, { type: "choose", modifier: s.offers[0], at: T0 });
+    }
+    if (s.bosses.includes("pentatonic") && s.bosses.includes("root")) bothSeen++;
+  }
+  check(`300 full runs, never both at once (${bothSeen})`, bothSeen === 0);
+}
+
+console.log("\nprevews follow the rules: a hidden degree is not drawn:");
+{
+  const pos = POSITIONS[0];
+  const shown = (bosses: BossKind[]) => {
+    const hidden = hiddenDegrees({ positions: [], roster: [], rushRank: 0, bosses });
+    return pos.notes.filter((n) => !hidden.includes(n.degree)).length;
+  };
+  const all = shown([]);
+  const pent = shown(["pentatonic"]);
+  const root = shown(["root"]);
+  check(`no rule: all ${all} notes drawn`, all === pos.notes.length);
+  check(`Pentatonic Only: ${pent} of ${all}`, pent < all && pent > root);
+  check(`Root Only: ${root} of ${all}, and every one a root`,
+    root > 0 && pos.notes.filter((n) => n.degree === 1).length === root);
+  check("No Mistakes changes nothing about what is drawn", shown(["strict"]) === all);
+}
+
+console.log("\nbosses take their turn:");
+{
+  check(`there are ${BOSS_KINDS.length} bosses`, BOSS_KINDS.length === 3);
+  check(`a run can hold ${MAX_BOSSES} of them — the exclusive pair sees to that`,
+    MAX_BOSSES === 2);
+  const seen = new Set<string>();
+  // Bosses land on pauses 4 and 8, so a run needs 8 pauses — 80 drills — for
+  // both to be in force.
+  for (let run = 0; run < 200; run++) {
+    let s = fresh();
+    for (let i = 0; i < 80; i++) {
+      s = settle(s, true, T0 + i * 40000);
+      if (s.stage !== "running") {
+        if (s.stage === "boss") seen.add(modifierId(s.offers[0]));
+        s = runReducer(s, { type: "choose", modifier: s.offers[0], at: T0 });
+      }
+    }
+    check(`  run ${run}: fills up on rules (${s.bosses.join(", ")})`, s.bosses.length === MAX_BOSSES);
+    if (run > 1) break; // three sample runs is plenty to print
+  }
+  // Across many runs every boss must be reachable, exclusive ones included —
+  // otherwise one would be dead content.
+  for (let run = 0; run < 300; run++) {
+    let s = fresh();
+    for (let i = 0; i < 90; i++) {
+      s = settle(s, true, T0 + i * 40000);
+      if (s.stage === "boss") seen.add(modifierId(s.offers[0]));
+      if (s.stage !== "running") s = runReducer(s, { type: "choose", modifier: s.offers[0], at: T0 });
+    }
+  }
+  check(`every boss is reachable (${[...seen].sort().join(", ")})`, seen.size === BOSS_KINDS.length);
 }
 
 console.log(fail === 0 ? "\nALL CHECKS PASSED" : `\n${fail} CHECK(S) FAILED`);

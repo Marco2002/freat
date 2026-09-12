@@ -1,12 +1,26 @@
-import type { PositionNote } from '../lib/data';
+import type { Degree, PositionNote } from '../lib/data';
 
 interface ShapePreviewProps {
   frets: readonly number[];
   notes: PositionNote[];
   invert: boolean;
+  /**
+   * Degrees a rule in force has taken off the neck. Dropping them here too
+   * means the preview shows the shape as it will actually be seen, rather than
+   * one the drill will never draw.
+   */
+  hiddenDegrees?: readonly Degree[];
 }
 
-export function ShapePreview({ frets, notes, invert }: ShapePreviewProps) {
+export function ShapePreview({
+  frets,
+  notes,
+  invert,
+  hiddenDegrees,
+}: ShapePreviewProps) {
+  const shown = hiddenDegrees?.length
+    ? notes.filter((n) => !hiddenDegrees.includes(n.degree))
+    : notes;
   const W = 76, H = 52;
   const padL = 10, padR = 10, padT = 8, padB = 8;
   const innerW = W - padL - padR;
@@ -32,7 +46,7 @@ export function ShapePreview({ frets, notes, invert }: ShapePreviewProps) {
           stroke="rgba(41,38,27,0.1)" strokeWidth={0.75}
         />
       ))}
-      {notes.map((n, i) => {
+      {shown.map((n, i) => {
         const cx = padL + (n.f - frets[0]) * fretGap;
         const stringRow = invert ? 5 - n.s : n.s;
         const cy = padT + stringRow * stringGap;

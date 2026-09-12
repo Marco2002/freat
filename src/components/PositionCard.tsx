@@ -1,10 +1,12 @@
 import { ShapePreview } from './ShapePreview';
-import type { Position } from '../lib/data';
+import type { Degree, Position } from '../lib/data';
 
 interface PositionCardProps {
   position: Position;
   selected: boolean;
   invert: boolean;
+  /** Degrees the switched-on rules take off the neck. */
+  hiddenDegrees?: readonly Degree[];
   onClick: () => void;
 }
 
@@ -17,6 +19,7 @@ export function PositionCard({
   position,
   selected,
   invert,
+  hiddenDegrees,
   onClick,
 }: PositionCardProps) {
   return (
@@ -58,6 +61,7 @@ export function PositionCard({
         frets={position.frets}
         notes={position.notes}
         invert={invert}
+        hiddenDegrees={hiddenDegrees}
       />
     </button>
   );

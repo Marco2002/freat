@@ -260,7 +260,36 @@
   }
 }
 
+/* A note tapped that was not in the arpeggio — it shakes its head. */
+.note-wrong .note-body {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: wiggle 0.45s ease;
+}
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  15% {
+    transform: translateX(-3.5px) rotate(-7deg);
+  }
+  38% {
+    transform: translateX(3.5px) rotate(7deg);
+  }
+  60% {
+    transform: translateX(-2.5px) rotate(-5deg);
+  }
+  82% {
+    transform: translateX(2px) rotate(3deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .note-wrong .note-body {
+    animation: none;
+  }
+
   /* Cards appear, but neither fly nor bob. */
   .modifier-card {
     animation: none;

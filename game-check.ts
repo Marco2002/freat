@@ -79,7 +79,7 @@ console.log("\nthree misses end the run:");
   check("the run is over", s.stage === "over");
   check("no lives left", s.lives === 0);
   check("the score is what was cleared", s.score === 0);
-  const after = runReducer(s, { type: "toggle", key: "0-7" });
+  const after = runReducer(s, { type: "toggle", key: "0-7", isTarget: true });
   check("a finished run ignores further taps", after.selected.size === 0);
 }
 
@@ -212,11 +212,11 @@ console.log(`\nexactly ${PANIC_SECONDS} warnings, evenly spaced, before time run
 console.log("\ntapping notes:");
 {
   let s = fresh();
-  s = runReducer(s, { type: "toggle", key: "2-9" });
+  s = runReducer(s, { type: "toggle", key: "2-9", isTarget: true });
   check("a tap selects", s.selected.has("2-9"));
-  s = runReducer(s, { type: "toggle", key: "2-9" });
+  s = runReducer(s, { type: "toggle", key: "2-9", isTarget: true });
   check("tapping again deselects", !s.selected.has("2-9"));
-  const settled = runReducer(runReducer(fresh(), { type: "solved" }), { type: "toggle", key: "2-9" });
+  const settled = runReducer(runReducer(fresh(), { type: "solved" }), { type: "toggle", key: "2-9", isTarget: true });
   check("taps are ignored once the drill is settled", settled.selected.size === 0);
 }
 

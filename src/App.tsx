@@ -10,11 +10,15 @@ import { NoteFinderTheory } from './pages/NoteFinderTheory';
 import { useRoute } from './hooks/useRoute';
 import { menuOf } from './lib/routes';
 import { RUN_CHORDS } from './lib/game';
+import { conflictsWith } from './lib/modifiers';
+import type { BossKind } from './lib/modifiers';
 
 export default function App() {
   const [route, navigate] = useRoute();
   const [selectedPositionIds, setSelectedPositionIds] = useState<number[]>([3]);
   const [selectedChordIndices, setSelectedChordIndices] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
+  // Boss rules switched on for practice. In a run these are imposed instead.
+  const [practiceBosses, setPracticeBosses] = useState<BossKind[]>([]);
   // The run's opening hand, chosen on the game setup screen.
   const [runPositionId, setRunPositionId] = useState<number | null>(null);
   const [runChordIndices, setRunChordIndices] = useState<number[]>([]);
@@ -32,6 +36,16 @@ export default function App() {
     setSelectedChordIndices((prev) =>
       prev.includes(idx) ? prev.filter((x) => x !== idx) : [...prev, idx]
     );
+  };
+
+  const toggleBoss = (boss: BossKind) => {
+    setPracticeBosses((prev) => {
+      if (prev.includes(boss)) return prev.filter((b) => b !== boss);
+      // Switching on a rule switches off any it cannot sit alongside, rather
+      // than refusing the tap.
+      const ousted = conflictsWith(boss);
+      return [...prev.filter((b) => !ousted.includes(b)), boss];
+    });
   };
 
   const toggleRunChord = (idx: number) => {
@@ -133,6 +147,8 @@ export default function App() {
         onToggle={togglePosition}
         selectedChordIndices={selectedChordIndices}
         onToggleChord={toggleChord}
+        bosses={practiceBosses}
+        onToggleBoss={toggleBoss}
         onBack={backToMenu}
         onStart={() => navigate({ screen: 'drill', mode })}
       />
@@ -147,6 +163,7 @@ export default function App() {
     <ArpeggioDrill
       selectedPositionIds={selectedPositionIds}
       selectedChordIndices={selectedChordIndices}
+      bosses={practiceBosses}
       // The drill is reached through position select, so that is where back
       // goes — including on a cold load of /arpeggio/drill, where it is the
       // screen the player would have come through.

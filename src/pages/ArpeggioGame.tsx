@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { CHORDS, chordKeysIn, keysOf, positionById } from "../lib/data";
+import {
+  CHORDS,
+  chordKeysIn,
+  keysOf,
+  positionById,
+  slotKeysIn,
+} from "../lib/data";
 import { playChord, playTick } from "../lib/audio";
 import {
   MODIFIER_INTERVAL,
@@ -12,7 +18,7 @@ import {
   runReducer,
 } from "../lib/game";
 import type { RunState } from "../lib/game";
-import { modifierId } from "../lib/modifiers";
+import { BOSS_INFO, hiddenDegrees, modifierId } from "../lib/modifiers";
 import type { Modifier } from "../lib/modifiers";
 import { Fretboard } from "../components/Fretboard";
 import { Hearts } from "../components/Hearts";
@@ -20,8 +26,8 @@ import { ModifierCard } from "../components/ModifierCard";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useInvertSetting } from "../hooks/useInvertSetting";
 
-/** How long the settled drill is held on screen before the next one. */
-const SETTLE_MS = { success: 800, timeout: 1100 };
+/** How long a cleared drill is held before the next one deals itself. */
+const SUCCESS_MS = 800;
 
 interface ArpeggioGameProps {
   positionId: number;
@@ -56,7 +62,12 @@ export function ArpeggioGame({
   const position = positionById(place.id);
   const chord = CHORDS[run.chordIdx];
 
-  const activeKeys = useMemo(() => keysOf(place.notes), [place]);
+  const hidden = hiddenDegrees(run);
+  // With notes taken off the neck, every fret in the window is in play.
+  const activeKeys = useMemo(
+    () => (hidden.length ? slotKeysIn(place.frets) : keysOf(place.notes)),
+    [place, hidden],
+  );
   const targetKeys = useMemo(
     () => chordKeysIn(place.notes, chord),
     [place, chord],
@@ -92,14 +103,20 @@ export function ArpeggioGame({
     );
   }, [live, run.selected, targetKeys]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // A cleared drill rolls on by itself. A missed one waits for the player: the
+  // arpeggio they were after stays on the neck until they say go.
   useEffect(() => {
-    if (run.phase === "playing" || run.stage !== "running") return;
+    if (run.phase !== "success" || run.stage !== "running") return;
     const t = setTimeout(
       () => dispatch({ type: "advance", at: Date.now() }),
-      SETTLE_MS[run.phase],
+      SUCCESS_MS,
     );
     return () => clearTimeout(t);
   }, [run.phase, run.stage]);
+
+  const missed =
+    run.stage === "running" &&
+    (run.phase === "timeout" || run.phase === "wrong");
 
   const secondsLeft = Math.ceil(leftMs / 1000);
   const fraction = leftMs / drillMs(run);
@@ -199,9 +216,9 @@ export function ArpeggioGame({
           className={`font-serif italic font-normal text-[clamp(110px,16vw,180px)] max-sm:text-[clamp(72px,22vw,110px)] leading-[0.85] tracking-[-0.03em] w-full transition-[color,transform] duration-[250ms] ease-in-out ${
             run.phase === "success"
               ? "text-green scale-[1.04]"
-              : run.phase === "timeout"
-                ? "text-wrong"
-                : "text-ink"
+              : run.phase === "playing"
+                ? "text-ink"
+                : "text-wrong"
           }`}
         >
           {chord.rank}
@@ -211,10 +228,12 @@ export function ArpeggioGame({
             run.phase === "playing"
               ? "opacity-0 -translate-y-1"
               : "opacity-100 translate-y-0"
-          } ${run.phase === "timeout" ? "text-wrong" : "text-green"}`}
+          } ${run.phase === "success" ? "text-green" : "text-wrong"}`}
         >
           {run.phase === "timeout" ? (
             "out of time"
+          ) : run.phase === "wrong" ? (
+            "not in the arpeggio"
           ) : (
             <>
               {chord.quality} <span className="opacity-45 mx-1">—</span>{" "}
@@ -224,21 +243,45 @@ export function ArpeggioGame({
         </div>
       </div>
 
+      {/* A wrong note, not merely a miss: the screen flashes with the wiggle. */}
+      {run.phase === "wrong" && (
+        <div className="panic-flash fixed inset-0 z-10" aria-hidden="true" />
+      )}
+
       <div className="w-full flex justify-center max-sm:order-[10]">
         <Fretboard
           frets={place.frets}
           activeKeys={activeKeys}
           selected={run.selected}
           targetKeys={targetKeys}
-          phase={run.phase === "success" ? "success" : "playing"}
+          phase={
+            run.phase === "success"
+              ? "success"
+              : missed
+                ? "reveal"
+                : "playing"
+          }
           invert={invert}
-          onToggle={(key) => dispatch({ type: "toggle", key })}
+          hiddenDegrees={hidden}
+          onToggle={(key) =>
+            dispatch({ type: "toggle", key, isTarget: targetKeys.has(key) })
+          }
           compact={isMobile}
         />
       </div>
 
-      <div className="w-full max-w-[720px] font-mono text-xs text-muted grid gap-4 grid-cols-2 sm:grid-cols-[1fr_auto_1fr] items-center max-sm:order-[9] max-sm:mt-auto max-sm:px-4 max-sm:max-w-full">
-        <div className="flex items-baseline gap-2.5 order-2 sm:order-none sm:justify-self-start">
+      <div
+        className={`w-full max-w-[720px] font-mono text-xs text-muted grid items-center max-sm:order-[9] max-sm:mt-auto max-sm:px-4 max-sm:max-w-full ${
+          missed
+            ? "grid-cols-[1fr_auto_1fr] gap-3"
+            : "grid-cols-2 sm:grid-cols-[1fr_auto_1fr] gap-4"
+        }`}
+      >
+        <div
+          className={`flex items-baseline gap-2.5 sm:order-none sm:justify-self-start ${
+            missed ? "order-1" : "order-2"
+          }`}
+        >
           <span className="uppercase tracking-[0.14em] text-[10.5px] text-muted-light">
             score
           </span>
@@ -246,10 +289,26 @@ export function ArpeggioGame({
             {String(run.score).padStart(2, "0")}
           </span>
         </div>
-        <div className="col-span-2 sm:col-span-1 text-center order-1 sm:order-none tracking-[0.02em]">
-          tap every note of the&nbsp;
-          <strong className="text-ink font-semibold">{chord.rank}</strong>
-          &nbsp;arpeggio
+        <div
+          className={`flex justify-center sm:order-none sm:col-span-1 tracking-[0.02em] text-center ${
+            missed ? "order-2" : "col-span-2 order-1"
+          }`}
+        >
+          {missed ? (
+            <button
+              className="bg-ink text-sand border border-ink font-mono text-[11px] font-medium tracking-[0.12em] uppercase py-2 px-[14px] rounded-full cursor-pointer transition-opacity duration-150 hover:opacity-80"
+              onClick={() => dispatch({ type: "advance", at: Date.now() })}
+              autoFocus
+            >
+              {run.lives > 0 ? "continue →" : "run over →"}
+            </button>
+          ) : (
+            <span>
+              tap every note of the&nbsp;
+              <strong className="text-ink font-semibold">{chord.rank}</strong>
+              &nbsp;arpeggio
+            </span>
+          )}
         </div>
         <div className="flex items-baseline gap-2.5 order-3 sm:order-none justify-self-end">
           <span className="uppercase tracking-[0.14em] text-[10.5px] text-muted-light">
@@ -271,6 +330,19 @@ export function ArpeggioGame({
         />
       )}
 
+      {run.stage === "boss" && (
+        <BossPause
+          run={run}
+          onContinue={() =>
+            dispatch({
+              type: "choose",
+              modifier: run.offers[0],
+              at: Date.now(),
+            })
+          }
+        />
+      )}
+
       {run.stage === "modifier" && (
         <ModifierPause
           run={run}
@@ -280,6 +352,61 @@ export function ArpeggioGame({
           }
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * Every fourth pause is not a choice. The card is dealt face up with no
+ * alternatives beside it — the only thing to do is look at the new rule and
+ * play on.
+ */
+function BossPause({
+  run,
+  onContinue,
+}: {
+  run: RunState;
+  onContinue: () => void;
+}) {
+  const boss = run.offers[0];
+  const blurb = boss?.kind === "boss" ? BOSS_INFO[boss.boss].blurb : "";
+
+  return (
+    <div className="fixed inset-0 z-20 flex items-center justify-center bg-sand/95 px-5 py-8 overflow-y-auto">
+      <div className="flex flex-col items-center gap-7 text-center max-w-[420px] w-full my-auto">
+        <div className="flex flex-col items-center gap-1.5">
+          <span className="font-mono text-[10.5px] font-medium tracking-[0.16em] uppercase text-wrong">
+            Boss · {run.drills} drills in
+          </span>
+          <span className="font-serif italic font-normal text-[clamp(34px,8vw,52px)] leading-[0.95] tracking-[-0.02em] text-ink">
+            New rule
+          </span>
+        </div>
+
+        <div className="modifier-table flex justify-center w-full">
+          {boss && (
+            <ModifierCard
+              modifier={boss}
+              invert={false}
+              hiddenDegrees={hiddenDegrees(run)}
+              index={0}
+              onChoose={() => {}}
+            />
+          )}
+        </div>
+
+        <div className="flex flex-col items-center gap-4">
+          <span className="font-mono text-[11.5px] leading-[1.6] tracking-[0.02em] text-muted max-w-[300px]">
+            {blurb}
+          </span>
+          <button
+            className="bg-ink text-sand border-none font-mono text-xs font-medium tracking-[0.14em] uppercase py-4 px-11 rounded-full cursor-pointer transition-opacity duration-150 hover:opacity-80"
+            onClick={onContinue}
+          >
+            Face it →
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -357,6 +484,7 @@ function ModifierPause({
                 key={id}
                 modifier={mod}
                 invert={invert}
+                hiddenDegrees={hiddenDegrees(run)}
                 index={i}
                 centered={
                   i === run.offers.length - 1 && run.offers.length % 2 === 1

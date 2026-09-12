@@ -7,6 +7,13 @@ import {
   scaleNotesInRange,
   soundingFret,
 } from '../lib/data';
+import type { Degree } from '../lib/data';
+
+/**
+ * A place a finger can go: a scale note, or — once a rule has thinned the neck
+ * — any other fret in the window, which carries no degree at all.
+ */
+type Slot = { s: number; f: number; degree: Degree | null };
 import { playNote } from '../lib/audio';
 
 const PAD_T = 40, PAD_B = 28;
@@ -36,7 +43,11 @@ const stringY = (s: number, invert: boolean): number =>
 const slideDuration = (fretsMoved: number): number =>
   Math.min(900, Math.round(320 + 55 * fretsMoved));
 
-export type Phase = 'playing' | 'success';
+/**
+ * `reveal` is the beat after a failed drill: the arpeggio that was wanted is
+ * shown, alongside whatever the player actually hit.
+ */
+export type Phase = 'playing' | 'success' | 'reveal';
 
 interface FretboardProps {
   /** Fret range of the active position — this is what the camera frames. */
@@ -47,6 +58,11 @@ interface FretboardProps {
   targetKeys: Set<string>;
   phase: Phase;
   invert: boolean;
+  /**
+   * Degrees to leave unmarked. The notes are still there and still tappable —
+   * only the dot is gone, so they have to be found rather than read.
+   */
+  hiddenDegrees?: readonly Degree[];
   onToggle: (key: string) => void;
   compact?: boolean;
 }
@@ -58,6 +74,7 @@ export function Fretboard({
   targetKeys,
   phase,
   invert,
+  hiddenDegrees,
   onToggle,
   compact = false,
 }: FretboardProps) {
@@ -93,6 +110,21 @@ export function Fretboard({
     () => scaleNotesInRange(neckFirst, neckLast),
     [neckFirst, neckLast],
   );
+
+  // With degrees hidden, the frets between them open up too. Otherwise an
+  // unmarked spot could only ever be a hidden scale note, and counting frets
+  // would give the shape away.
+  const slots = useMemo<Slot[]>(() => {
+    if (!hiddenDegrees?.length) return notes;
+    const inScale = new Set(notes.map(keyOf));
+    const blanks: Slot[] = [];
+    for (let s = 0; s < STRING_LABELS.length; s++) {
+      for (const f of frets) {
+        if (!inScale.has(`${s}-${f}`)) blanks.push({ s, f, degree: null });
+      }
+    }
+    return [...notes, ...blanks];
+  }, [notes, hiddenDegrees, frets]);
 
 
   // Camera: centre the active position inside the window.
@@ -169,25 +201,57 @@ export function Fretboard({
 
           {/* notes — the entire scale is always mounted; position membership is
               a visual state, so notes slide in from where they really live */}
-          {notes.map((n) => {
+          {slots.map((n) => {
             const key = keyOf(n);
             const isActive = activeKeys.has(key);
             const isSelected = isActive && selected.has(key);
-            const isSuccess = isActive && phase === 'success' && targetKeys.has(key);
+            // The notes that were wanted — lit on a clear, and again when the
+            // answer is shown after a miss.
+            const isAnswer =
+              isActive &&
+              (phase === 'success' || phase === 'reveal') &&
+              targetKeys.has(key);
+            // A note the player hit that was not in the arpeggio.
+            const isWrong =
+              isActive && phase === 'reveal' && isSelected && !targetKeys.has(key);
             const isRoot = n.degree === 1;
+            // Hidden until it is touched: tapping one brings it back, so the
+            // player can see what they picked — right or wrong.
+            // A slot with no degree is never marked — it is not in the scale.
+            const isHidden =
+              (n.degree === null || !!hiddenDegrees?.includes(n.degree)) &&
+              !isSelected &&
+              !isAnswer &&
+              !isWrong;
             const x = fretCenterX(n.f);
             const y = stringY(n.s, invert);
 
-            const fill = isSuccess ? '#4a9c7f' : isSelected ? '#e0a458' : '#f0eee9';
-            const stroke = isSuccess ? '#3a7d63' : isSelected ? '#b8853d' : 'rgba(0,0,0,0.08)';
-            const dotFill = isSuccess ? '#ffffff' : '#29261b';
+            const fill = isWrong
+              ? '#b94040'
+              : isAnswer
+                ? '#4a9c7f'
+                : isSelected
+                  ? '#e0a458'
+                  : '#f0eee9';
+            const stroke = isWrong
+              ? '#8f3030'
+              : isAnswer
+                ? '#3a7d63'
+                : isSelected
+                  ? '#b8853d'
+                  : 'rgba(0,0,0,0.08)';
+            const dotFill = isAnswer || isWrong ? '#ffffff' : '#29261b';
             const tappable = isActive && phase === 'playing';
 
             return (
               <g
                 key={key}
-                className={`note${isSuccess ? ' note-success' : ''}`}
-                opacity={isActive ? 1 : GHOST_OPACITY}
+                className={`note${
+                  isAnswer && phase === 'success' ? ' note-success' : ''
+                }${isWrong ? ' note-wrong' : ''}`}
+                // opacity 0 still takes taps, which is the whole point here —
+                // visibility:hidden or display:none would not.
+                opacity={isHidden ? 0 : isActive ? 1 : GHOST_OPACITY}
                 style={{
                   cursor: tappable ? 'pointer' : 'default',
                   pointerEvents: isActive ? 'auto' : 'none',
