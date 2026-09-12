@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export function useInvertSetting(): [boolean, (v: boolean | ((prev: boolean) => boolean)) => void] {
   const [invert, setInvertState] = useState(() => {

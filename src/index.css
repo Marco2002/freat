@@ -2,10 +2,11 @@
 
 @theme {
   --color-sand: #f0eee9;
+  --color-slate: #bdcdd6;
   --color-ink: #29261b;
-  --color-muted-dark: #8a857d;
-  --color-muted: #7d7a72;
-  --color-muted-light: #aaa49a;
+  --color-muted-dark: #6c675e;
+  --color-muted: #5f5c54;
+  --color-muted-light: #8a8579;
   --color-amber: #e0a458;
   --color-amber-dark: #b8853d;
   --color-green: #3a7d63;
@@ -22,6 +23,8 @@
   body {
     height: 100%;
     overflow: hidden;
+    /* Prevent rubber-band / overscroll glow so the app feels anchored like native */
+    overscroll-behavior: none;
   }
 
   body {
@@ -29,24 +32,41 @@
     color: var(--color-ink);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    /* Native-app touch behaviour: no blue tap flash, no long-press menu,
+       no accidental text selection, no double-tap-to-zoom delay */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
   }
 
   #root {
     height: 100dvh;
     overflow: hidden;
+    /* Keep every screen clear of the notch / Dynamic Island, the home
+       indicator, and the rounded corners (incl. landscape). Requires
+       viewport-fit=cover, which is set in index.html. */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 }
 
 /* SVG fretboard note animations — cannot be expressed as Tailwind utilities */
+.note {
+  transition: opacity 0.3s ease;
+}
 .note circle {
   transition:
     fill 0.18s ease,
     stroke 0.18s ease;
 }
-.note:hover circle:nth-of-type(2) {
+.note:hover .note-body {
   filter: brightness(1.06);
 }
-.note-success circle:nth-of-type(2) {
+.note-success .note-body {
   transform-origin: center;
   transform-box: fill-box;
   animation: pop 0.5s ease;
@@ -55,4 +75,14 @@
   0%   { transform: scale(1); }
   45%  { transform: scale(1.18); }
   100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* duration is set inline per-slide, so this needs to win */
+  .neck-slide {
+    transition-duration: 0ms !important;
+  }
+  .note-success .note-body {
+    animation: none;
+  }
 }

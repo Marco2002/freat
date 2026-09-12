@@ -9,14 +9,14 @@ export function NoteFinderTheory({ onBack }: NoteFinderTheoryProps) {
   const [keyIdx, setKeyIdx] = useState(0); // 0 = C
 
   return (
-    <div
-      className="h-full w-full max-w-[800px] mx-auto flex flex-col gap-6 overflow-hidden px-8 pt-14 max-sm:px-4 max-sm:pt-6"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 48px)' }}
-    >
+    <div className="h-full w-full max-w-[800px] mx-auto flex flex-col gap-6 overflow-hidden px-8 pt-14 pb-8 max-sm:px-4 max-sm:pt-6 max-sm:pb-5">
+      {/* Full-screen sage background (covers the safe-area insets) */}
+      <div className="fixed inset-0 -z-10 bg-slate" />
+
       {/* Top row */}
       <div className="w-full flex items-center justify-between gap-4">
         <button
-          className="shrink-0 bg-transparent border border-ink/15 text-muted font-mono text-[10.5px] font-medium tracking-[0.12em] uppercase py-2 px-[14px] rounded-full cursor-pointer transition-all duration-150 hover:border-ink/35 hover:text-ink"
+          className="shrink-0 bg-sand border border-ink/35 text-muted font-mono text-[10.5px] font-medium tracking-[0.12em] uppercase py-2 px-[14px] rounded-full cursor-pointer transition-all duration-150 hover:border-ink/55 hover:text-ink"
           onClick={onBack}
         >
           ← back
@@ -43,7 +43,7 @@ export function NoteFinderTheory({ onBack }: NoteFinderTheoryProps) {
                   'shrink-0 font-mono text-[11px] font-medium tracking-[0.1em] py-[7px] px-[14px] rounded-full border-[1.5px] cursor-pointer transition-all duration-150',
                   idx === keyIdx
                     ? 'bg-ink border-ink text-sand'
-                    : 'bg-transparent border-ink/[0.13] text-muted hover:border-ink/30 hover:text-ink',
+                    : 'bg-sand border-ink/35 text-muted hover:border-ink/55 hover:text-ink',
                 ].join(' ')}
               >
                 {label.alt ? `${label.name}/${label.alt}` : label.name}
@@ -63,7 +63,7 @@ export function NoteFinderTheory({ onBack }: NoteFinderTheoryProps) {
             return (
               <div
                 key={chord.rank}
-                className="border border-ink/[0.1] rounded-2xl p-4 flex flex-col items-center gap-2 text-center"
+                className="bg-sand border border-ink/[0.1] rounded-2xl p-4 flex flex-col items-center gap-2 text-center"
               >
                 <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted-light">
                   {qualityShort}

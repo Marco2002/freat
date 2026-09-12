@@ -69,14 +69,14 @@ export function NoteFinderDrill({ onBack }: NoteFinderDrillProps) {
   }
 
   return (
-    <div
-      className="h-full w-full max-w-[600px] mx-auto flex flex-col gap-6 overflow-hidden px-8 pt-14 max-sm:px-4 max-sm:pt-6 max-sm:gap-4"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 48px)' }}
-    >
+    <div className="h-full w-full max-w-[600px] mx-auto flex flex-col gap-6 overflow-hidden px-8 pt-14 pb-8 max-sm:px-4 max-sm:pt-6 max-sm:pb-5 max-sm:gap-4">
+      {/* Full-screen sage background (covers the safe-area insets) */}
+      <div className="fixed inset-0 -z-10 bg-slate" />
+
       {/* Top row */}
       <div className="w-full flex items-center justify-between gap-4">
         <button
-          className="shrink-0 bg-transparent border border-ink/15 text-muted font-mono text-[10.5px] font-medium tracking-[0.12em] uppercase py-2 px-[14px] rounded-full cursor-pointer transition-all duration-150 hover:border-ink/35 hover:text-ink"
+          className="shrink-0 bg-sand border border-ink/35 text-muted font-mono text-[10.5px] font-medium tracking-[0.12em] uppercase py-2 px-[14px] rounded-full cursor-pointer transition-all duration-150 hover:border-ink/55 hover:text-ink"
           onClick={onBack}
         >
           ← back
@@ -125,7 +125,7 @@ export function NoteFinderDrill({ onBack }: NoteFinderDrillProps) {
                   ? 'bg-green border-green text-sand'
                   : isWrong
                   ? 'bg-wrong border-wrong text-sand'
-                  : 'border-ink/[0.13] text-ink hover:border-ink/30 hover:bg-ink/[0.04]',
+                  : 'bg-sand border-ink/35 text-ink hover:border-ink/55',
               ].join(' ')}
             >
               <span className="font-serif italic text-[22px] leading-none">{label.name}</span>
@@ -150,7 +150,7 @@ export function NoteFinderDrill({ onBack }: NoteFinderDrillProps) {
           </span>
         </div>
         <button
-          className="bg-transparent border border-ink/15 text-muted font-mono text-[11px] font-medium tracking-[0.12em] uppercase py-2 px-[14px] rounded-full cursor-pointer transition-all duration-150 enabled:hover:border-ink/35 enabled:hover:text-ink disabled:opacity-40 disabled:cursor-default"
+          className="bg-sand border border-ink/35 text-muted font-mono text-[11px] font-medium tracking-[0.12em] uppercase py-2 px-[14px] rounded-full cursor-pointer transition-all duration-150 enabled:hover:border-ink/55 enabled:hover:text-ink disabled:opacity-40 disabled:cursor-default"
           onClick={handleSkip}
           disabled={phase !== 'playing'}
         >

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 interface MenuPageProps {
   onPractice: () => void;
@@ -8,6 +8,14 @@ interface MenuPageProps {
 }
 
 type Side = "arpeggio" | "note-finder";
+
+// Per-mode full-screen background colour (covers the safe-area insets too).
+const BACKGROUNDS: Record<Side, string> = {
+  arpeggio: "var(--color-sand)", // warm sand
+  "note-finder": "var(--color-slate)", // soft slate blue
+};
+
+const SWIPE_THRESHOLD = 50; // px of horizontal travel needed to flip modes
 
 function NavArrow({
   direction,
@@ -19,7 +27,7 @@ function NavArrow({
   return (
     <button
       onClick={onClick}
-      className="flex items-center justify-center w-10 h-10 rounded-full bg-transparent border border-ink/15 text-muted-dark cursor-pointer transition-all duration-150 hover:border-ink/35 hover:text-ink"
+      className="flex items-center justify-center w-10 h-10 rounded-full bg-transparent border border-ink/35 text-muted-dark cursor-pointer transition-all duration-150 hover:border-ink/55 hover:text-ink"
       aria-label={direction === "right" ? "Next mode" : "Previous mode"}
     >
       <svg
@@ -71,89 +79,108 @@ export function MenuPage({
   onNoteFinderTheory,
 }: MenuPageProps) {
   const [side, setSide] = useState<Side>("arpeggio");
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const startX = useRef<number | null>(null);
+
+  const isArp = side === "arpeggio";
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+    setDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (startX.current === null) return;
+    let dx = e.touches[0].clientX - startX.current;
+    // Add resistance when dragging past either end of the carousel.
+    if ((isArp && dx > 0) || (!isArp && dx < 0)) dx *= 0.3;
+    setDragX(dx);
+  };
+
+  const handleTouchEnd = () => {
+    if (dragX < -SWIPE_THRESHOLD && isArp) setSide("note-finder");
+    else if (dragX > SWIPE_THRESHOLD && !isArp) setSide("arpeggio");
+    setDragX(0);
+    setDragging(false);
+    startX.current = null;
+  };
+
+  // The title strip is 200% wide; -50% moves it left by one viewport width.
+  const baseShift = isArp ? 0 : -50;
 
   return (
-    <div className="h-full overflow-hidden relative">
-      {/* Sliding container — 200% wide so each panel is one viewport width */}
+    <div
+      className="h-full relative overflow-hidden"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Full-screen background layer — extends under the safe-area insets so
+          the mode colour fills the whole device, with no seam at the edges. */}
       <div
-        className="h-full flex transition-transform duration-500 ease-in-out"
-        style={{
-          width: "200%",
-          transform:
-            side === "note-finder" ? "translateX(-50%)" : "translateX(0)",
-        }}
-      >
-        {/* ── Arpeggio Drill panel ───────────────────── */}
-        <div
-          className="h-full flex flex-col items-center justify-center gap-12 p-8 relative"
-          style={{ width: "50%" }}
-        >
-          <div className="absolute right-5 top-1/2 -translate-y-1/2">
-            <NavArrow
-              direction="right"
-              onClick={() => setSide("note-finder")}
-            />
-          </div>
+        className="fixed inset-0 -z-10 transition-colors duration-500 ease-in-out"
+        style={{ background: BACKGROUNDS[side] }}
+      />
 
-          <div className="text-center">
-            <h1 className="font-serif italic font-normal text-[clamp(48px,10vw,84px)] leading-[0.9] tracking-[-0.03em] text-ink m-0 mb-4">
-              Arpeggio
-              <br />
-              Drill
-            </h1>
-          </div>
+      {/* Nav arrows — only the actionable direction is shown */}
+      {!isArp && (
+        <div className="absolute left-5 top-1/2 -translate-y-1/2 z-10">
+          <NavArrow direction="left" onClick={() => setSide("arpeggio")} />
+        </div>
+      )}
+      {isArp && (
+        <div className="absolute right-5 top-1/2 -translate-y-1/2 z-10">
+          <NavArrow direction="right" onClick={() => setSide("note-finder")} />
+        </div>
+      )}
 
-          <div className="flex flex-col items-center gap-3">
-            <button
-              className="bg-ink text-sand border-none font-mono text-xs font-medium tracking-[0.14em] uppercase py-4 px-11 rounded-full cursor-pointer transition-opacity duration-150 hover:opacity-80"
-              onClick={onPractice}
-            >
-              Practice →
-            </button>
-            <button
-              className="bg-transparent text-ink border-[1.5px] border-ink/25 font-mono text-xs font-medium tracking-[0.14em] uppercase py-[14px] px-11 rounded-full cursor-pointer transition-all duration-150 hover:border-ink/50"
-              onClick={onTheory}
-            >
-              Theory →
-            </button>
+      <div className="h-full flex flex-col items-center justify-center gap-12">
+        {/* Title — the only thing that slides between modes. Spans the full
+            screen width so it slides off at the true edge, not before. */}
+        <div className="w-full overflow-hidden">
+          <div
+            className="flex w-[200%]"
+            style={{
+              transform: `translateX(calc(${baseShift}% + ${dragX}px))`,
+              transition: dragging ? "none" : "transform 500ms ease-in-out",
+            }}
+          >
+            <div className="w-1/2 flex items-center justify-center px-8">
+              <h1 className="text-center font-serif italic font-normal text-[clamp(48px,10vw,84px)] leading-[0.9] tracking-[-0.03em] text-ink m-0">
+                Arpeggio
+                <br />
+                Drill
+              </h1>
+            </div>
+            <div className="w-1/2 flex items-center justify-center px-8">
+              <h1 className="text-center font-serif italic font-normal text-[clamp(48px,10vw,84px)] leading-[0.9] tracking-[-0.03em] text-ink m-0">
+                Note
+                <br />
+                Finder
+              </h1>
+            </div>
           </div>
         </div>
 
-        {/* ── Note Finder panel ─────────────────────── */}
-        <div
-          className="h-full flex flex-col items-center justify-center gap-12 p-8 relative"
-          style={{ width: "50%" }}
-        >
-          <div className="absolute left-5 top-1/2 -translate-y-1/2">
-            <NavArrow direction="left" onClick={() => setSide("arpeggio")} />
-          </div>
-
-          <div className="text-center">
-            <h1 className="font-serif italic font-normal text-[clamp(48px,10vw,84px)] leading-[0.9] tracking-[-0.03em] text-ink m-0 mb-4">
-              Note
-              <br />
-              Finder
-            </h1>
-          </div>
-
-          <div className="flex flex-col items-center gap-3">
-            <button
-              className="bg-ink text-sand border-none font-mono text-xs font-medium tracking-[0.14em] uppercase py-4 px-11 rounded-full cursor-pointer transition-opacity duration-150 hover:opacity-80"
-              onClick={onNoteFinderPractice}
-            >
-              Practice →
-            </button>
-            <button
-              className="bg-transparent text-ink border-[1.5px] border-ink/25 font-mono text-xs font-medium tracking-[0.14em] uppercase py-[14px] px-11 rounded-full cursor-pointer transition-all duration-150 hover:border-ink/50"
-              onClick={onNoteFinderTheory}
-            >
-              Theory →
-            </button>
-          </div>
+        {/* Buttons — fixed in place, act on whichever mode is active */}
+        <div className="flex flex-col items-center gap-3">
+          <button
+            className="bg-ink text-sand border-none font-mono text-xs font-medium tracking-[0.14em] uppercase py-4 px-11 rounded-full cursor-pointer transition-opacity duration-150 hover:opacity-80"
+            onClick={isArp ? onPractice : onNoteFinderPractice}
+          >
+            Practice →
+          </button>
+          <button
+            className="bg-sand text-ink border-[1.5px] border-ink/40 font-mono text-xs font-medium tracking-[0.14em] uppercase py-[14px] px-11 rounded-full cursor-pointer transition-all duration-150 hover:border-ink/65"
+            onClick={isArp ? onTheory : onNoteFinderTheory}
+          >
+            Theory →
+          </button>
         </div>
       </div>
 
-      {/* Pagination dots — outside the slider so they don't move */}
+      {/* Pagination dots */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-none">
         <Dots active={side} />
       </div>
