@@ -1,11 +1,11 @@
 import { useId, useMemo, useState } from 'react';
 import {
   OCTAVE_FRETS,
-  RING_FIRST_FRET,
   STRING_LABELS,
   STRING_THICKNESS,
   keyOf,
   scaleNotesInRange,
+  soundingFret,
 } from '../lib/data';
 import { playNote } from '../lib/audio';
 
@@ -34,7 +34,7 @@ const stringY = (s: number, invert: boolean): number =>
 // Longer travel needs more time or it reads as a blur, shorter travel feels
 // sluggish on a fixed duration.
 const slideDuration = (fretsMoved: number): number =>
-  Math.min(700, Math.round(240 + 42 * fretsMoved));
+  Math.min(900, Math.round(320 + 55 * fretsMoved));
 
 export type Phase = 'playing' | 'success';
 
@@ -94,11 +94,6 @@ export function Fretboard({
     [neckFirst, neckLast],
   );
 
-  // Rotating stacks octaves onto the fret numbers, in either direction. Fold
-  // them off before sounding a note, so a shape rings at the same pitch however
-  // many laps up or down the neck it happens to be drawn.
-  const lapShift =
-    Math.floor((frets[0] - RING_FIRST_FRET) / OCTAVE_FRETS) * OCTAVE_FRETS;
 
   // Camera: centre the active position inside the window.
   const centerFret = (frets[0] + frets[frets.length - 1] + 1) / 2;
@@ -201,7 +196,7 @@ export function Fretboard({
                 onPointerDown={(e) => {
                   if (!tappable) return;
                   e.preventDefault();
-                  playNote(n.s, n.f - lapShift);
+                  playNote(n.s, soundingFret(n.f, frets[0]));
                   onToggle(key);
                 }}
               >

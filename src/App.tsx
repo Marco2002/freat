@@ -5,11 +5,11 @@ import { ArpeggioDrill } from './pages/ArpeggioDrill';
 import { TheoryPage } from './pages/TheoryPage';
 import { NoteFinderDrill } from './pages/NoteFinderDrill';
 import { NoteFinderTheory } from './pages/NoteFinderTheory';
-
-type Page = 'menu' | 'select' | 'drill' | 'theory' | 'note-finder' | 'note-finder-theory';
+import { useRoute } from './hooks/useRoute';
+import { menuOf } from './lib/routes';
 
 export default function App() {
-  const [page, setPage] = useState<Page>('menu');
+  const [route, navigate] = useRoute();
   const [selectedPositionIds, setSelectedPositionIds] = useState<number[]>([3]);
   const [selectedChordIndices, setSelectedChordIndices] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
 
@@ -25,47 +25,62 @@ export default function App() {
     );
   };
 
-  if (page === 'menu') {
+  // Going back always lands on the menu already showing the mode just left.
+  const backToMenu = () => navigate(menuOf(route.mode));
+  const { screen, mode } = route;
+
+  if (screen === 'menu') {
     return (
       <MenuPage
-        onPractice={() => setPage('select')}
-        onTheory={() => setPage('theory')}
-        onNoteFinderPractice={() => setPage('note-finder')}
-        onNoteFinderTheory={() => setPage('note-finder-theory')}
+        mode={mode}
+        // Flipping the carousel is not a new screen, so it replaces rather than
+        // stacking an entry the back button would have to walk through.
+        onModeChange={(next) => navigate(menuOf(next), true)}
+        onPractice={() =>
+          navigate(
+            mode === 'arpeggio'
+              ? { screen: 'positions', mode }
+              : { screen: 'drill', mode }
+          )
+        }
+        onTheory={() => navigate({ screen: 'theory', mode })}
       />
     );
   }
 
-  if (page === 'select') {
+  if (screen === 'theory') {
+    return mode === 'arpeggio' ? (
+      <TheoryPage onBack={backToMenu} />
+    ) : (
+      <NoteFinderTheory onBack={backToMenu} />
+    );
+  }
+
+  if (screen === 'positions') {
     return (
       <PositionSelect
         selected={selectedPositionIds}
         onToggle={togglePosition}
         selectedChordIndices={selectedChordIndices}
         onToggleChord={toggleChord}
-        onBack={() => setPage('menu')}
-        onStart={() => setPage('drill')}
+        onBack={backToMenu}
+        onStart={() => navigate({ screen: 'drill', mode })}
       />
     );
   }
 
-  if (page === 'theory') {
-    return <TheoryPage onBack={() => setPage('menu')} />;
-  }
-
-  if (page === 'note-finder') {
-    return <NoteFinderDrill onBack={() => setPage('menu')} />;
-  }
-
-  if (page === 'note-finder-theory') {
-    return <NoteFinderTheory onBack={() => setPage('menu')} />;
+  if (mode === 'note-finder') {
+    return <NoteFinderDrill onBack={backToMenu} />;
   }
 
   return (
     <ArpeggioDrill
       selectedPositionIds={selectedPositionIds}
       selectedChordIndices={selectedChordIndices}
-      onBack={() => setPage('select')}
+      // The drill is reached through position select, so that is where back
+      // goes — including on a cold load of /arpeggio/drill, where it is the
+      // screen the player would have come through.
+      onBack={() => navigate({ screen: 'positions', mode })}
     />
   );
 }

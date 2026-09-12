@@ -174,6 +174,15 @@ export function placePosition(
 export const initialPlacement = (number: number): Placement =>
   placePosition(positionById(number), positionById(number).frets[0]);
 
+/**
+ * The fret a drawn note is really fingered at, with the octaves the neck has
+ * rotated through folded back off. Sound this rather than the drawn fret, or a
+ * shape would ring higher and higher the longer a session runs.
+ */
+export const soundingFret = (drawnFret: number, firstFret: number): number =>
+  drawnFret -
+  Math.floor((firstFret - RING_FIRST_FRET) / OCTAVE_FRETS) * OCTAVE_FRETS;
+
 export const CHORDS: Chord[] = [
   { rank: "I", quality: "major", tones: [1, 3, 5], degrees: ["1", "3", "5"] },
   { rank: "ii", quality: "minor", tones: [2, 4, 6], degrees: ["2", "4", "6"] },

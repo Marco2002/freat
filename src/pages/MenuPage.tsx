@@ -1,16 +1,17 @@
 import { useState, useRef } from "react";
+import type { Mode } from "../lib/routes";
 
 interface MenuPageProps {
+  /** Which half of the carousel is showing. Comes from the URL, so a refresh —
+      or coming back out of a drill — reopens the menu on the same mode. */
+  mode: Mode;
+  onModeChange: (mode: Mode) => void;
   onPractice: () => void;
   onTheory: () => void;
-  onNoteFinderPractice: () => void;
-  onNoteFinderTheory: () => void;
 }
 
-type Side = "arpeggio" | "note-finder";
-
 // Per-mode full-screen background colour (covers the safe-area insets too).
-const BACKGROUNDS: Record<Side, string> = {
+const BACKGROUNDS: Record<Mode, string> = {
   arpeggio: "var(--color-sand)", // warm sand
   "note-finder": "var(--color-slate)", // soft slate blue
 };
@@ -59,7 +60,7 @@ function NavArrow({
   );
 }
 
-function Dots({ active }: { active: Side }) {
+function Dots({ active }: { active: Mode }) {
   return (
     <div className="flex gap-2 items-center">
       <div
@@ -73,17 +74,16 @@ function Dots({ active }: { active: Side }) {
 }
 
 export function MenuPage({
+  mode,
+  onModeChange,
   onPractice,
   onTheory,
-  onNoteFinderPractice,
-  onNoteFinderTheory,
 }: MenuPageProps) {
-  const [side, setSide] = useState<Side>("arpeggio");
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const startX = useRef<number | null>(null);
 
-  const isArp = side === "arpeggio";
+  const isArp = mode === "arpeggio";
 
   const handleTouchStart = (e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX;
@@ -99,8 +99,8 @@ export function MenuPage({
   };
 
   const handleTouchEnd = () => {
-    if (dragX < -SWIPE_THRESHOLD && isArp) setSide("note-finder");
-    else if (dragX > SWIPE_THRESHOLD && !isArp) setSide("arpeggio");
+    if (dragX < -SWIPE_THRESHOLD && isArp) onModeChange("note-finder");
+    else if (dragX > SWIPE_THRESHOLD && !isArp) onModeChange("arpeggio");
     setDragX(0);
     setDragging(false);
     startX.current = null;
@@ -120,18 +120,21 @@ export function MenuPage({
           the mode colour fills the whole device, with no seam at the edges. */}
       <div
         className="fixed inset-0 -z-10 transition-colors duration-500 ease-in-out"
-        style={{ background: BACKGROUNDS[side] }}
+        style={{ background: BACKGROUNDS[mode] }}
       />
 
       {/* Nav arrows — only the actionable direction is shown */}
       {!isArp && (
         <div className="absolute left-5 top-1/2 -translate-y-1/2 z-10">
-          <NavArrow direction="left" onClick={() => setSide("arpeggio")} />
+          <NavArrow direction="left" onClick={() => onModeChange("arpeggio")} />
         </div>
       )}
       {isArp && (
         <div className="absolute right-5 top-1/2 -translate-y-1/2 z-10">
-          <NavArrow direction="right" onClick={() => setSide("note-finder")} />
+          <NavArrow
+            direction="right"
+            onClick={() => onModeChange("note-finder")}
+          />
         </div>
       )}
 
@@ -167,13 +170,13 @@ export function MenuPage({
         <div className="flex flex-col items-center gap-3">
           <button
             className="bg-ink text-sand border-none font-mono text-xs font-medium tracking-[0.14em] uppercase py-4 px-11 rounded-full cursor-pointer transition-opacity duration-150 hover:opacity-80"
-            onClick={isArp ? onPractice : onNoteFinderPractice}
+            onClick={onPractice}
           >
             Practice →
           </button>
           <button
             className="bg-sand text-ink border-[1.5px] border-ink/40 font-mono text-xs font-medium tracking-[0.14em] uppercase py-[14px] px-11 rounded-full cursor-pointer transition-all duration-150 hover:border-ink/65"
-            onClick={isArp ? onTheory : onNoteFinderTheory}
+            onClick={onTheory}
           >
             Theory →
           </button>
@@ -182,7 +185,7 @@ export function MenuPage({
 
       {/* Pagination dots */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-none">
-        <Dots active={side} />
+        <Dots active={mode} />
       </div>
     </div>
   );

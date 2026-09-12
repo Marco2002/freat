@@ -23,19 +23,15 @@ function pickNextChord(prevIdx: number, available: number[]): number {
   return next;
 }
 
-function pickPosition(ids: number[]): number {
-  return ids[Math.floor(Math.random() * ids.length)];
-}
-
-// Step to the next selected position, drawn wherever it lies nearest the neck
-// the player is already looking at. The positions are a ring, so this wraps past
-// the highest back to the lowest — and because the wrapped one is placed an
-// octave up rather than back at the bottom of the neck, 5 → 1 slides the same
-// two or three frets as every other step.
+// Pick the next position at random from the ones selected — the same one
+// included, which simply leaves the neck where it is for another round.
+//
+// When it does move, the position is drawn wherever it lies nearest the neck
+// already on screen rather than at some fixed spot, so any pair of positions is
+// a short slide apart: that is what keeps 5 → 1 as close as 1 → 2.
 function nextPlacement(current: Placement, ids: number[]): Placement {
-  if (ids.length <= 1) return current;
-  const ring = [...ids].sort((a, b) => a - b);
-  const id = ring.find((n) => n > current.id) ?? ring[0];
+  const id = ids[Math.floor(Math.random() * ids.length)];
+  if (id === current.id) return current;
   return placePosition(positionById(id), current.frets[0]);
 }
 
@@ -57,7 +53,11 @@ export function ArpeggioDrill({
       ],
   );
   const [place, setPlace] = useState<Placement>(() =>
-    initialPlacement(pickPosition(selectedPositionIds)),
+    initialPlacement(
+      selectedPositionIds[
+        Math.floor(Math.random() * selectedPositionIds.length)
+      ],
+    ),
   );
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [phase, setPhase] = useState<Phase>("playing");
