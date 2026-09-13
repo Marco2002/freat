@@ -91,12 +91,16 @@ console.log("\nthe practice setup sections:");
   check(`both optional sections start collapsed (${shut})`, shut === 2);
   check("…and are expandable", (html.match(/aria-expanded="false"/g) ?? []).length === 2);
   // Sevenths are their own chords, so all seven are offered regardless of
-  // which triads are on.
+  // which triads are on. A rank now prints as stem + a coloured suffix span,
+  // so the tags come out before matching.
+  const text = html.replace(/<[^>]*>/g, "");
   check("all seven sevenths are offered",
     ["Imaj7", "ii7", "iii7", "IVmaj7", "V7", "vi7", "viiø7"].every((r) =>
-      html.includes(r)));
+      text.includes(r)));
   check("…and the triads are still their own row",
-    ["I", "ii", "iii", "IV", "V", "vi", "vii°"].every((r) => html.includes(r)));
+    ["I", "ii", "iii", "IV", "V", "vi", "vii°"].every((r) => text.includes(r)));
+  check("the extension is coloured apart from the numeral",
+    html.includes('class="text-seventh'));
 }
 
 // Root Only is a step up, so it starts out locked behind its prerequisite.

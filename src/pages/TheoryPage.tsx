@@ -8,10 +8,13 @@ import {
   keysOf,
   placePosition,
   seventhIndexOf,
+  extensionTone,
+  chordToneLabels,
 } from "../lib/data";
 import type { Placement } from "../lib/data";
 import { Fretboard } from "../components/Fretboard";
 import { TabChips } from "../components/TabChips";
+import { ChordRank } from "../components/ChordRank";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useInvertSetting } from "../hooks/useInvertSetting";
 
@@ -51,6 +54,24 @@ export function TheoryPage({ onBack }: TheoryPageProps) {
       ),
     [place, chord],
   );
+
+  // What each highlighted note is playing in the chord — R, ♭3, 5, ♭7.
+  const toneLabels = useMemo(() => {
+    const byDegree = chordToneLabels(chord);
+    return new Map(
+      place.notes
+        .filter((n) => byDegree.has(n.degree))
+        .map((n) => [keyOf(n), byDegree.get(n.degree)!] as const),
+    );
+  }, [place, chord]);
+
+  // The 7th itself, marked apart from the triad under it.
+  const extensionKeys = useMemo(() => {
+    const ext = extensionTone(chord);
+    return ext === null
+      ? new Set<string>()
+      : new Set(place.notes.filter((n) => n.degree === ext).map(keyOf));
+  }, [place, chord]);
 
   const pillClass = (active: boolean) =>
     `font-mono text-[11px] font-medium tracking-[0.1em] py-[7px] px-[14px] rounded-full cursor-pointer border-[1.5px] transition-all duration-[120ms] ${
@@ -132,7 +153,9 @@ export function TheoryPage({ onBack }: TheoryPageProps) {
               className={pillClass(degree === i)}
               onClick={() => setDegree(i)}
             >
-              {ALL_CHORDS[family === "seventh" ? seventhIndexOf(i) : i].rank}
+              <ChordRank
+                rank={ALL_CHORDS[family === "seventh" ? seventhIndexOf(i) : i].rank}
+              />
             </button>
           ))}
         </div>
@@ -140,7 +163,7 @@ export function TheoryPage({ onBack }: TheoryPageProps) {
 
       <div className="flex items-baseline gap-4 max-sm:px-4">
         <span className="font-serif italic font-normal text-[clamp(36px,6vw,56px)] leading-none tracking-[-0.02em] text-ink">
-          {chord.rank}
+          <ChordRank rank={chord.rank} />
         </span>
         <span className="font-mono text-[13px] font-medium tracking-[0.04em] text-muted">
           {chord.quality} <span className="opacity-45 mx-1">—</span>{" "}
@@ -153,6 +176,8 @@ export function TheoryPage({ onBack }: TheoryPageProps) {
           frets={place.frets}
           activeKeys={activeKeys}
           selected={highlightedKeys}
+          accentKeys={extensionKeys}
+          labels={toneLabels}
           targetKeys={new Set()}
           phase="playing"
           invert={invert}

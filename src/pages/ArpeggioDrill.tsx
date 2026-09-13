@@ -12,6 +12,7 @@ import {
 import type { Placement } from "../lib/data";
 import { playChord } from "../lib/audio";
 import { Fretboard } from "../components/Fretboard";
+import { ChordRank } from "../components/ChordRank";
 import type { Phase } from "../components/Fretboard";
 import { hiddenDegrees, judgeTap } from "../lib/modifiers";
 import type { BossKind } from "../lib/modifiers";
@@ -217,7 +218,7 @@ export function ArpeggioDrill({
                   : "text-ink"
           }`}
         >
-          {chord.rank}
+          <ChordRank rank={chord.rank} />
         </div>
         <div
           className={`font-mono text-sm font-medium tracking-[0.04em] h-[18px] transition-[opacity,transform] duration-[250ms] ease-in-out ${
@@ -302,7 +303,9 @@ export function ArpeggioDrill({
           ) : (
             <span>
               tap every note of the&nbsp;
-              <strong className="text-ink font-semibold">{chord.rank}</strong>
+              <strong className="text-ink font-semibold">
+                <ChordRank rank={chord.rank} />
+              </strong>
               &nbsp;arpeggio
             </span>
           )}

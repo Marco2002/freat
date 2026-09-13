@@ -34,6 +34,8 @@ const NECK_SKIRT_FRETS = OCTAVE_FRETS;
 
 const GHOST_OPACITY = 0.12;
 
+const FLAT = '\u266d';
+
 const stringY = (s: number, invert: boolean): number =>
   PAD_T + (invert ? 5 - s : s) * STRING_GAP;
 
@@ -55,6 +57,17 @@ interface FretboardProps {
   /** Keys inside the active position. Everything else renders as an inert ghost. */
   activeKeys: Set<string>;
   selected: Set<string>;
+  /**
+   * Selected notes to mark as an extension rather than a chord tone — the 7th
+   * and anything above it, in the palette's red instead of amber.
+   */
+  accentKeys?: Set<string>;
+  /**
+   * Text to print inside particular notes — the interval each one plays in the
+   * chord. Only the theory board passes these; a drill would be giving away
+   * the answer.
+   */
+  labels?: ReadonlyMap<string, string>;
   targetKeys: Set<string>;
   phase: Phase;
   invert: boolean;
@@ -77,6 +90,8 @@ export function Fretboard({
   frets,
   activeKeys,
   selected,
+  accentKeys,
+  labels,
   targetKeys,
   phase,
   invert,
@@ -225,6 +240,10 @@ export function Fretboard({
               phase === 'reveal' &&
               (key === wrongKey ||
                 (!wrongKey && isSelected && !targetKeys.has(key)));
+            // A selected note that is the chord's extension, not one of its
+            // triad tones.
+            const isAccent = isSelected && !!accentKeys?.has(key);
+            const label = isActive ? labels?.get(key) : undefined;
             const isRoot = n.degree === 1;
             // Hidden until it is touched: tapping one brings it back, so the
             // player can see what they picked — right or wrong.
@@ -243,17 +262,22 @@ export function Fretboard({
               ? '#b94040'
               : isAnswer
                 ? '#4a9c7f'
-                : isSelected
-                  ? '#e0a458'
-                  : '#f0eee9';
+                : isAccent
+                  ? '#c1551f'
+                  : isSelected
+                    ? '#e0a458'
+                    : '#f0eee9';
             const stroke = isWrong
               ? '#8f3030'
               : isAnswer
                 ? '#3a7d63'
-                : isSelected
-                  ? '#b8853d'
-                  : 'rgba(0,0,0,0.08)';
-            const dotFill = isAnswer || isWrong ? '#ffffff' : '#29261b';
+                : isAccent
+                  ? '#94401a'
+                  : isSelected
+                    ? '#b8853d'
+                    : 'rgba(0,0,0,0.08)';
+            const dotFill =
+              isAnswer || isWrong || isAccent ? '#ffffff' : '#29261b';
             const tappable = isActive && phase === 'playing';
 
             return (
@@ -284,8 +308,43 @@ export function Fretboard({
                   />
                 )}
                 <circle className="note-body" cx={x} cy={y} r={17} fill={fill} stroke={stroke} strokeWidth={1.2} />
-                {isRoot && (
-                  <circle className="note-root" cx={x} cy={y} r={5} fill={dotFill} style={{ pointerEvents: 'none' }} />
+                {/* A label says what the note is doing, which is more than the
+                    key-root dot says — so it replaces it where there is one. */}
+                {label ? (
+                  <text
+                    x={x} y={y + 0.5}
+                    fill={dotFill}
+                    fontSize={label.length > 1 ? 13 : 14.5}
+                    textAnchor="middle" dominantBaseline="central"
+                    fontFamily="'JetBrains Mono', monospace"
+                    fontWeight={700} letterSpacing="-0.02em"
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    {/* The flat is a small, light glyph and the font only
+                        ships up to 700 — so weight alone cannot thicken it any
+                        further. Stroking it in its own colour does, and works
+                        just as well if the glyph comes from a fallback font. */}
+                    {label.startsWith(FLAT) ? (
+                      <>
+                        <tspan
+                          fontSize={16.5}
+                          stroke={dotFill}
+                          strokeWidth={0.55}
+                          paintOrder="stroke"
+                          strokeLinejoin="round"
+                        >
+                          {FLAT}
+                        </tspan>
+                        {label.slice(FLAT.length)}
+                      </>
+                    ) : (
+                      label
+                    )}
+                  </text>
+                ) : (
+                  isRoot && (
+                    <circle className="note-root" cx={x} cy={y} r={5} fill={dotFill} style={{ pointerEvents: 'none' }} />
+                  )
                 )}
               </g>
             );

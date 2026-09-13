@@ -24,6 +24,7 @@ import { hiddenDegrees, modifierId } from "../lib/modifiers";
 import type { Modifier } from "../lib/modifiers";
 import { Fretboard } from "../components/Fretboard";
 import { Hearts } from "../components/Hearts";
+import { ChordRank } from "../components/ChordRank";
 import { ModifierCard } from "../components/ModifierCard";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useInvertSetting } from "../hooks/useInvertSetting";
@@ -230,7 +231,7 @@ export function ArpeggioGame({
                 : "text-wrong"
           }`}
         >
-          {chord.rank}
+          <ChordRank rank={chord.rank} />
         </div>
         <div
           className={`font-mono text-sm font-medium tracking-[0.04em] h-[18px] transition-[opacity,transform] duration-[250ms] ease-in-out ${
@@ -322,7 +323,9 @@ export function ArpeggioGame({
           ) : (
             <span>
               tap every note of the&nbsp;
-              <strong className="text-ink font-semibold">{chord.rank}</strong>
+              <strong className="text-ink font-semibold">
+                <ChordRank rank={chord.rank} />
+              </strong>
               &nbsp;arpeggio
             </span>
           )}

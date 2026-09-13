@@ -122,6 +122,51 @@ export function chordWithSeventh(c: Chord): Chord {
   };
 }
 
+/**
+ * A chord's rank split into its roman numeral and whatever is stacked on top —
+ * "Imaj7" into "I" and "maj7" — so the extension can be picked out in print.
+ */
+export function splitRank(rank: string): { stem: string; suffix: string } {
+  const m = /^([IViv]+°?)(.*)$/.exec(rank);
+  return m ? { stem: m[1], suffix: m[2] } : { stem: rank, suffix: "" };
+}
+
+/** The note stacked on top of a triad, if this chord has one. */
+export const extensionTone = (c: Chord): Degree | null =>
+  c.tones.length > 3 ? c.tones[3] : null;
+
+// Interval from a chord's root, in the shorthand chord and arpeggio charts
+// use: a bare number is the major-scale interval, a flat lowers it. One or two
+// characters, which is what lets it sit inside a note.
+const INTERVAL_LABELS = [
+  "R",
+  "♭2",
+  "2",
+  "♭3",
+  "3",
+  "4",
+  "♭5",
+  "5",
+  "♭6",
+  "6",
+  "♭7",
+  "7",
+] as const;
+
+/**
+ * How a chord tone reads against that chord's own root — so the ii is R ♭3 5
+ * rather than 2 4 6, and the V7's 4th degree shows as the ♭7 it actually is.
+ */
+export function intervalLabel(root: Degree, degree: Degree): string {
+  const semitones =
+    (MAJOR_INTERVALS[degree - 1] - MAJOR_INTERVALS[root - 1] + 12) % 12;
+  return INTERVAL_LABELS[semitones];
+}
+
+/** Every tone of a chord, labelled against its root. */
+export const chordToneLabels = (c: Chord): Map<Degree, string> =>
+  new Map(c.tones.map((d) => [d, intervalLabel(c.tones[0], d)]));
+
 export const keyOf = (n: { s: number; f: number }): string => `${n.s}-${n.f}`;
 
 export const keysOf = (notes: PositionNote[]): Set<string> =>

@@ -1,4 +1,5 @@
 import { ALL_CHORDS, CHORDS } from '../lib/data';
+import { ChordRank } from './ChordRank';
 
 interface ChordPillsProps {
   selected: number[];
@@ -39,7 +40,7 @@ export function ChordPills({
                   : 'bg-transparent border-ink/35 text-muted hover:border-ink/55 hover:text-ink cursor-pointer'
             }`}
           >
-            {ALL_CHORDS[i].rank}
+            <ChordRank rank={ALL_CHORDS[i].rank} />
           </button>
         );
       })}

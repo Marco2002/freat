@@ -12,6 +12,12 @@
   --color-green: #3a7d63;
   --color-green-light: #4a9c7f;
   --color-wrong: #b94040;
+  /* Chord extensions — the 7th and anything stacked above it. A burnt orange:
+     it has to sit between amber (selected) and red (wrong) in hue, so it is
+     pushed well below amber in lightness and well above red in saturation to
+     stay apart from both. */
+  --color-seventh: #c1551f;
+  --color-seventh-dark: #94401a;
 
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;

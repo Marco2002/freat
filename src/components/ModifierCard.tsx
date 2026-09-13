@@ -3,6 +3,7 @@ import type { Degree } from '../lib/data';
 import { BOSS_HIDES, RUSH_SECONDS, modifierInfo } from '../lib/modifiers';
 import type { Modifier } from '../lib/modifiers';
 import { ShapePreview } from './ShapePreview';
+import { ChordRank } from './ChordRank';
 
 interface ModifierCardProps {
   modifier: Modifier;
@@ -59,7 +60,7 @@ function Visual({
             c.rank.length > 3 ? 'text-[30px]' : 'text-[44px]'
           }`}
         >
-          {c.rank}
+          <ChordRank rank={c.rank} />
         </span>
         {modifier.kind === 'seventh' && (
           <span className="font-mono text-[10px] tracking-[0.08em] text-muted">
