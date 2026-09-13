@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
-  CHORDS,
+  ALL_CHORDS,
+  ascendingKeys,
   chordKeysIn,
   initialPlacement,
   keysOf,
@@ -12,7 +13,7 @@ import type { Placement } from "../lib/data";
 import { playChord } from "../lib/audio";
 import { Fretboard } from "../components/Fretboard";
 import type { Phase } from "../components/Fretboard";
-import { hiddenDegrees } from "../lib/modifiers";
+import { hiddenDegrees, judgeTap } from "../lib/modifiers";
 import type { BossKind } from "../lib/modifiers";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useInvertSetting } from "../hooks/useInvertSetting";
@@ -38,7 +39,7 @@ interface ArpeggioDrillProps {
 const SUCCESS_MS = 800;
 
 /** Why a drill stopped, when it did not go right. */
-type Miss = "wrong" | "skipped";
+type Miss = "wrong" | "order" | "skipped";
 
 export function ArpeggioDrill({
   selectedPositionIds,
@@ -64,11 +65,14 @@ export function ArpeggioDrill({
   // Set alongside the reveal, so the banner can say what went wrong and only a
   // real mistake gets the flash.
   const [miss, setMiss] = useState<Miss | null>(null);
+  // The note that ended the drill, for the board to point at afterwards.
+  const [wrongKey, setWrongKey] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
   const [invert, setInvert] = useInvertSetting();
   const isMobile = useIsMobile();
 
-  const chord = CHORDS[chordIdx];
+  // The selection holds triads and sevenths alike, so this is simply a lookup.
+  const chord = ALL_CHORDS[chordIdx];
   // The shape as it is really fingered, whatever octave it is drawn in. Audio
   // reads from here, so a note sounds at its own pitch however far the board has
   // rotated.
@@ -90,6 +94,12 @@ export function ArpeggioDrill({
     [place, chord],
   );
 
+  // The note In Order is waiting for: the lowest of the arpeggio not yet down.
+  const nextKey = useMemo(
+    () => ascendingKeys(place.notes, targetKeys).find((k) => !selected.has(k)),
+    [place, targetKeys, selected],
+  );
+
 
   useEffect(() => {
     if (phase !== "playing") return;
@@ -109,6 +119,7 @@ export function ArpeggioDrill({
     setPlace((p) => nextPlacement(p, selectedPositionIds));
     setSelected(new Set());
     setMiss(null);
+    setWrongKey(null);
     setPhase("playing");
   };
 
@@ -123,11 +134,16 @@ export function ArpeggioDrill({
 
   const toggle = (key: string) => {
     if (phase !== "playing") return;
-    // No Mistakes, switched on in practice setup: a note outside the arpeggio
-    // ends the drill. There are no lives here, so the streak is the cost.
-    if (!targetKeys.has(key) && bosses.includes("strict")) {
+    // The switched-on rules judge the tap, by the same function the run uses.
+    // There are no lives here, so the streak is the cost.
+    const fault = judgeTap(
+      { positions: [], roster: [], rushRank: 0, bosses },
+      { isTarget: targetKeys.has(key), isNext: key === nextKey },
+    );
+    if (fault) {
       setPhase("reveal");
-      setMiss("wrong");
+      setMiss(fault === "note" ? "wrong" : "order");
+      setWrongKey(key);
       setStreak(0);
       setSelected((prev) => new Set(prev).add(key));
       return;
@@ -194,7 +210,7 @@ export function ArpeggioDrill({
           className={`font-serif italic font-normal text-[clamp(110px,16vw,180px)] max-sm:text-[clamp(72px,22vw,110px)] leading-[0.85] tracking-[-0.03em] w-full transition-[color,transform] duration-[250ms] ease-in-out ${
             phase === "success"
               ? "text-green scale-[1.04]"
-              : miss === "wrong"
+              : miss === "wrong" || miss === "order"
                 ? "text-wrong"
                 : phase === "reveal"
                   ? "text-muted-dark"
@@ -209,7 +225,7 @@ export function ArpeggioDrill({
               ? "opacity-0 -translate-y-1"
               : "opacity-100 translate-y-0"
           } ${
-            miss === "wrong"
+            miss === "wrong" || miss === "order"
               ? "text-wrong"
               : miss === "skipped"
                 ? "text-muted"
@@ -218,6 +234,8 @@ export function ArpeggioDrill({
         >
           {miss === "wrong" ? (
             "not in the arpeggio"
+          ) : miss === "order" ? (
+            "out of order — lowest first"
           ) : miss === "skipped" ? (
             "here it is"
           ) : (
@@ -229,8 +247,8 @@ export function ArpeggioDrill({
         </div>
       </div>
 
-      {/* A mistake, not merely a miss: the screen flashes with the wiggle. */}
-      {miss === "wrong" && (
+      {/* A broken rule, not merely a miss: the screen flashes with the wiggle. */}
+      {(miss === "wrong" || miss === "order") && (
         <div className="panic-flash fixed inset-0 z-10" aria-hidden="true" />
       )}
 
@@ -243,6 +261,7 @@ export function ArpeggioDrill({
           phase={phase}
           invert={invert}
           hiddenDegrees={hidden}
+          wrongKey={wrongKey}
           onToggle={toggle}
           compact={isMobile}
         />

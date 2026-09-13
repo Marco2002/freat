@@ -1,18 +1,26 @@
-import { CHORDS } from '../lib/data';
+import { ALL_CHORDS, CHORDS } from '../lib/data';
 
 interface ChordPillsProps {
   selected: number[];
   onToggle: (idx: number) => void;
+  /** Which chords to offer, as ALL_CHORDS indices. Defaults to the triads. */
+  indices?: number[];
   /** When set, no more than this many can be on at once. */
   max?: number;
 }
 
-export function ChordPills({ selected, onToggle, max }: ChordPillsProps) {
+export function ChordPills({
+  selected,
+  onToggle,
+  indices,
+  max,
+}: ChordPillsProps) {
   const full = max !== undefined && selected.length >= max;
+  const shown = indices ?? CHORDS.map((_, i) => i);
 
   return (
     <div className="flex gap-2 flex-wrap">
-      {CHORDS.map((c, i) => {
+      {shown.map((i) => {
         const isOn = selected.includes(i);
         // At the cap the remaining chords really are unavailable until one is
         // dropped, so they say so rather than failing silently on a tap.
@@ -31,7 +39,7 @@ export function ChordPills({ selected, onToggle, max }: ChordPillsProps) {
                   : 'bg-transparent border-ink/35 text-muted hover:border-ink/55 hover:text-ink cursor-pointer'
             }`}
           >
-            {c.rank}
+            {ALL_CHORDS[i].rank}
           </button>
         );
       })}

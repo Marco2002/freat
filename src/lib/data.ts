@@ -48,6 +48,15 @@ export const STRING_THICKNESS = [2.4, 2.0, 1.7, 1.3, 1.0, 0.8] as const;
 // Pitch class of each open string in standard tuning, low E → high E.
 export const OPEN_STRING_PC = [4, 9, 2, 7, 11, 4] as const;
 
+// The same strings as absolute pitch (MIDI: E2, A2, D3, G3, B3, E4). Pitch
+// classes cannot order two notes — B3 and E4 are 11 and 4 — so anything that
+// needs low-to-high has to count from here.
+export const OPEN_STRING_MIDI = [40, 45, 50, 55, 59, 64] as const;
+
+/** How high a note sounds, in semitones. Higher number, higher pitch. */
+export const pitchOf = (n: { s: number; f: number }): number =>
+  OPEN_STRING_MIDI[n.s] + n.f;
+
 // The major scale repeats every 12 frets, so a shape moved by this much is the
 // identical fingering an octave away. That repetition is what lets the neck be
 // treated as endless: there is always another copy of every position further up
@@ -78,10 +87,64 @@ export interface Chord {
 
 // Takes anything with a string and a fret, so it keys plain board slots as well
 // as scale notes.
+/**
+ * The next third up from a triad — the note that makes it a seventh chord.
+ * Stacking thirds means skipping a degree, which is +6 around the seven.
+ */
+export const seventhTone = (c: Chord): Degree =>
+  ((((c.tones[0] + 5) % 7) + 1) as Degree);
+
+/**
+ * A triad as its diatonic seventh. Which seventh it is falls out of the scale
+ * rather than being listed: eleven semitones above the root is a major 7th, ten
+ * is a minor one — which is what separates IVmaj7 from V7 even though both sit
+ * on a major triad.
+ */
+export function chordWithSeventh(c: Chord): Chord {
+  const seventh = seventhTone(c);
+  const semitones =
+    (MAJOR_INTERVALS[seventh - 1] - MAJOR_INTERVALS[c.tones[0] - 1] + 12) % 12;
+  const stem = c.rank.replace("°", "");
+  const [rank, quality] =
+    c.quality === "diminished"
+      ? [`${stem}ø7`, "half-diminished"]
+      : semitones === 11
+        ? [`${stem}maj7`, "major 7"]
+        : c.quality === "major"
+          ? [`${stem}7`, "dominant 7"]
+          : [`${stem}7`, "minor 7"];
+
+  return {
+    rank,
+    quality,
+    tones: [...c.tones, seventh],
+    degrees: [...c.degrees, String(seventh)],
+  };
+}
+
 export const keyOf = (n: { s: number; f: number }): string => `${n.s}-${n.f}`;
 
 export const keysOf = (notes: PositionNote[]): Set<string> =>
   new Set(notes.map(keyOf));
+
+/**
+ * The notes of a drill in playing order, lowest pitch first — the sequence In
+ * Order expects. Ties cannot arise: no position holds the same pitch twice.
+ */
+export const ascendingKeys = (
+  notes: PositionNote[],
+  targets: Set<string>,
+): string[] =>
+  notes
+    .filter((n) => targets.has(keyOf(n)))
+    .sort((a, b) => pitchOf(a) - pitchOf(b))
+    .map(keyOf);
+
+/** The inverse of {@link keyOf}. */
+export const keyFromParts = (key: string): { s: number; f: number } => {
+  const [s, f] = key.split("-").map(Number);
+  return { s, f };
+};
 
 /**
  * Every string-and-fret slot inside a position's window, in the scale or not.
@@ -234,3 +297,22 @@ export const CHORDS: Chord[] = [
     degrees: ["7", "2", "4"],
   },
 ];
+
+/** Each triad's diatonic seventh, by the same index. */
+export const SEVENTH_CHORDS: Chord[] = CHORDS.map(chordWithSeventh);
+
+/**
+ * Every chord a drill can draw, as one flat list: the seven triads, then their
+ * sevenths. A seventh is a chord in its own right, not a version of another —
+ * a run holding both the V and the V7 drills each of them in turn — so they
+ * share one index space and one roster.
+ */
+export const ALL_CHORDS: Chord[] = [...CHORDS, ...SEVENTH_CHORDS];
+
+/** Where the sevenths start in {@link ALL_CHORDS}. */
+export const SEVENTH_OFFSET = CHORDS.length;
+
+export const seventhIndexOf = (chordIdx: number): number =>
+  chordIdx + SEVENTH_OFFSET;
+export const isSeventhIndex = (idx: number): boolean => idx >= SEVENTH_OFFSET;
+export const triadIndexOf = (idx: number): number => idx % SEVENTH_OFFSET;

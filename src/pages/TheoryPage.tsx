@@ -1,16 +1,26 @@
 import { useState, useMemo } from "react";
 import {
   POSITIONS,
+  ALL_CHORDS,
   CHORDS,
   initialPlacement,
   keyOf,
   keysOf,
   placePosition,
+  seventhIndexOf,
 } from "../lib/data";
 import type { Placement } from "../lib/data";
 import { Fretboard } from "../components/Fretboard";
+import { TabChips } from "../components/TabChips";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useInvertSetting } from "../hooks/useInvertSetting";
+
+type Family = "base" | "seventh";
+
+const FAMILIES = [
+  { id: "base", label: "base" },
+  { id: "seventh", label: "7th" },
+] as const;
 
 interface TheoryPageProps {
   onBack: () => void;
@@ -21,11 +31,16 @@ export function TheoryPage({ onBack }: TheoryPageProps) {
   // to whichever copy of it is nearest the neck already on screen, so stepping
   // 5 → 1 (or 1 → 5) slides to the neighbouring shape instead of the far end.
   const [place, setPlace] = useState<Placement>(() => initialPlacement(1));
-  const [chordIdx, setChordIdx] = useState(0);
+  // Which family is on show, and which degree within it. Keeping the degree
+  // separate from the family is what lets the switch hold your place: on the V,
+  // flipping to 7th gives you the V7 rather than sending you back to the I.
+  const [family, setFamily] = useState<Family>("base");
+  const [degree, setDegree] = useState(0);
   const [invert, setInvert] = useInvertSetting();
   const isMobile = useIsMobile();
 
-  const chord = CHORDS[chordIdx];
+  const chordIdx = family === "seventh" ? seventhIndexOf(degree) : degree;
+  const chord = ALL_CHORDS[chordIdx];
 
   const activeKeys = useMemo(() => keysOf(place.notes), [place]);
 
@@ -104,17 +119,20 @@ export function TheoryPage({ onBack }: TheoryPageProps) {
       </div>
 
       <div className="flex flex-col gap-2 max-sm:px-4">
-        <div className="font-mono text-[10.5px] font-medium tracking-[0.14em] uppercase text-muted-light">
-          Chord
+        <div className="flex items-center gap-2.5">
+          <span className="font-mono text-[10.5px] font-medium tracking-[0.14em] uppercase text-muted-light">
+            Chord
+          </span>
+          <TabChips tabs={FAMILIES} active={family} onChange={setFamily} />
         </div>
         <div className="flex gap-2 flex-wrap max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden">
-          {CHORDS.map((c, i) => (
+          {CHORDS.map((_, i) => (
             <button
               key={i}
-              className={pillClass(chordIdx === i)}
-              onClick={() => setChordIdx(i)}
+              className={pillClass(degree === i)}
+              onClick={() => setDegree(i)}
             >
-              {c.rank}
+              {ALL_CHORDS[family === "seventh" ? seventhIndexOf(i) : i].rank}
             </button>
           ))}
         </div>

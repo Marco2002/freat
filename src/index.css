@@ -285,7 +285,34 @@
   }
 }
 
+/* A rule chip that only exists once its prerequisite is on. It grows out of
+   the chip before it: the width opens first, then the chip slides into the gap,
+   so it reads as coming from that chip rather than simply appearing. */
+.chip-unlocked {
+  animation: chip-out 0.36s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+  transform-origin: left center;
+}
+@keyframes chip-out {
+  0% {
+    opacity: 0;
+    max-width: 0;
+    transform: translateX(-10px) scaleX(0.6);
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    max-width: 320px;
+    transform: translateX(0) scaleX(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .chip-unlocked {
+    animation: none;
+  }
+
   .note-wrong .note-body {
     animation: none;
   }

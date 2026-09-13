@@ -63,6 +63,12 @@ interface FretboardProps {
    * only the dot is gone, so they have to be found rather than read.
    */
   hiddenDegrees?: readonly Degree[];
+  /**
+   * The note that ended the drill. Named outright because it is not always one
+   * the board could work out — an out-of-order tap is a perfectly good note of
+   * the arpeggio, just not the one that was due.
+   */
+  wrongKey?: string | null;
   onToggle: (key: string) => void;
   compact?: boolean;
 }
@@ -75,6 +81,7 @@ export function Fretboard({
   phase,
   invert,
   hiddenDegrees,
+  wrongKey,
   onToggle,
   compact = false,
 }: FretboardProps) {
@@ -211,9 +218,13 @@ export function Fretboard({
               isActive &&
               (phase === 'success' || phase === 'reveal') &&
               targetKeys.has(key);
-            // A note the player hit that was not in the arpeggio.
+            // The note that ended the drill: named, or failing that any note
+            // hit that was not in the arpeggio at all.
             const isWrong =
-              isActive && phase === 'reveal' && isSelected && !targetKeys.has(key);
+              isActive &&
+              phase === 'reveal' &&
+              (key === wrongKey ||
+                (!wrongKey && isSelected && !targetKeys.has(key)));
             const isRoot = n.degree === 1;
             // Hidden until it is touched: tapping one brings it back, so the
             // player can see what they picked — right or wrong.
@@ -226,6 +237,8 @@ export function Fretboard({
             const x = fretCenterX(n.f);
             const y = stringY(n.s, invert);
 
+            // A wrong note wins the colour even when it is also an answer note,
+            // which is exactly the out-of-order case.
             const fill = isWrong
               ? '#b94040'
               : isAnswer

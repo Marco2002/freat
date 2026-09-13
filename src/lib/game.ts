@@ -4,8 +4,9 @@ import {
   applyModifier,
   availableBosses,
   drillSeconds,
-  hasBoss,
   isBossPause,
+  judgeTap,
+  rollBosses,
   rollOffers,
 } from "./modifiers";
 import type { BossKind, Modifier } from "./modifiers";
@@ -17,10 +18,20 @@ import type { BossKind, Modifier } from "./modifiers";
 export const RUN_LIVES = 3;
 /** How many chords a run opens with. */
 export const RUN_CHORDS = 3;
+
+/**
+ * What the picker starts on: position 1, and the I, IV and V — the three chords
+ * every major key leans on, so Play is a single tap for anyone who does not
+ * want to choose.
+ */
+export const DEFAULT_RUN_POSITION = 1;
+export const DEFAULT_RUN_CHORDS = [0, 3, 4];
 /** Drills between modifier choices. */
 export const MODIFIER_INTERVAL = 10;
-/** Cards laid out at each pause. */
+/** Cards laid out at an ordinary pause. */
 export const MODIFIER_CHOICES = 3;
+/** Cards laid out at a boss pause — fewer, and all of them unwelcome. */
+export const BOSS_CHOICES = 2;
 
 /**
  * Warning flashes before a drill expires: one a second, the last landing one
@@ -32,7 +43,18 @@ export const PANIC_SECONDS = 3;
 /** Fraction of the clock left where the bar turns fully red. */
 export const DANGER_FRACTION = 0.25;
 
-export type DrillPhase = "playing" | "success" | "timeout" | "wrong";
+export type DrillPhase =
+  | "playing"
+  | "success"
+  | "timeout"
+  /** A note that was not in the arpeggio. */
+  | "wrong"
+  /** A note of the arpeggio, but not the one that was due next. */
+  | "disorder";
+
+/** Has the drill stopped without being cleared? */
+export const isMiss = (phase: DrillPhase): boolean =>
+  phase === "timeout" || phase === "wrong" || phase === "disorder";
 export type RunStage = "running" | "modifier" | "boss" | "over";
 
 export interface RunState {
@@ -49,6 +71,8 @@ export interface RunState {
   chordIdx: number;
   /** Note keys the player has tapped for the current drill. */
   selected: Set<string>;
+  /** The note that ended the drill, so it can be pointed at. */
+  wrongKey: string | null;
   phase: DrillPhase;
   stage: RunStage;
   lives: number;
@@ -66,7 +90,8 @@ export interface RunState {
 export type RunAction =
   /** `isTarget` says whether the tapped note belongs to the arpeggio — the
       component knows the shape, so the rule stays a plain decision here. */
-  | { type: "toggle"; key: string; isTarget: boolean }
+  /** `isNext` is whether this is the note In Order was waiting for. */
+  | { type: "toggle"; key: string; isTarget: boolean; isNext: boolean }
   | { type: "solved" }
   | { type: "expired" }
   | { type: "advance"; at: number }
@@ -98,6 +123,7 @@ export function initialRun(
     place: initialPlacement(positionId),
     chordIdx: roster[Math.floor(Math.random() * roster.length)],
     selected: new Set(),
+    wrongKey: null,
     phase: "playing",
     stage: "running",
     lives: RUN_LIVES,
@@ -116,6 +142,7 @@ function nextDrill(state: RunState, at: number): RunState {
     stage: "running",
     phase: "playing",
     selected: new Set(),
+    wrongKey: null,
     offers: [],
     chordIdx: pickNextChord(state.chordIdx, state.roster),
     place: nextPlacement(state.place, state.positions),
@@ -135,13 +162,18 @@ export function runReducer(state: RunState, action: RunAction): RunState {
   switch (action.type) {
     case "toggle": {
       if (state.phase !== "playing" || state.stage !== "running") return state;
-      // Under No Mistakes a note outside the arpeggio ends the drill there and
-      // then. The wrong note is left showing, so the player sees what they hit.
-      if (!action.isTarget && hasBoss(state, "strict")) {
+      // A tap the rules refuse ends the drill there and then. The offending
+      // note is left showing, so the player sees what they hit.
+      const fault = judgeTap(state, {
+        isTarget: action.isTarget,
+        isNext: action.isNext,
+      });
+      if (fault) {
         return {
           ...state,
-          phase: "wrong",
+          phase: fault === "note" ? "wrong" : "disorder",
           lives: state.lives - 1,
+          wrongKey: action.key,
           selected: new Set(state.selected).add(action.key),
         };
       }
@@ -166,26 +198,29 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       if (state.lives <= 0) return { ...state, drills, stage: "over" };
 
       // A modifier is owed every so many drills. Every fourth one is a boss:
-      // not offered, imposed. A run that has somehow taken everything plays
-      // straight on rather than pausing on an empty table.
+      // not offered, imposed.
       if (drills % MODIFIER_INTERVAL === 0) {
-        if (isBossPause(state.taken.length)) {
-          const bosses = availableBosses(state);
-          if (bosses.length > 0) {
-            const boss = bosses[Math.floor(Math.random() * bosses.length)];
-            return {
-              ...state,
-              drills,
-              stage: "boss",
-              offers: [{ kind: "boss", boss }],
-            };
-          }
-          // Every boss already in force — fall through to an ordinary pick.
-        }
+        const bossesLeft = availableBosses(state);
+        const bossPause = (): RunState => ({
+          ...state,
+          drills,
+          stage: "boss",
+          offers: rollBosses(state, BOSS_CHOICES),
+        });
+
+        if (isBossPause(state.taken.length) && bossesLeft.length > 0)
+          return bossPause();
+
         const offers = rollOffers(state, MODIFIER_CHOICES);
-        if (offers.length > 0) {
+        if (offers.length > 0)
           return { ...state, drills, stage: "modifier", offers };
-        }
+
+        // Whichever kind was due has run out. Take the other rather than skip
+        // the pause: a skipped pause never adds to `taken`, so the boss cadence
+        // would stall and the run would quietly stop getting harder.
+        if (bossesLeft.length > 0) return bossPause();
+
+        // Nothing left at all — the run has everything, so it plays straight on.
       }
       return { ...nextDrill(state, action.at), drills };
     }

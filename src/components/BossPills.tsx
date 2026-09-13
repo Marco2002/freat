@@ -13,27 +13,30 @@ interface BossPillsProps {
 export function BossPills({ selected, onToggle }: BossPillsProps) {
   const loadout = { positions: [], roster: [], rushRank: 0, bosses: selected };
 
+  // A rule built on another is not offered at all until that one is on — it
+  // then slides out of the chip it belongs to. BOSS_KINDS is ordered so a rule
+  // always follows its prerequisite, which is what it slides out of.
+  const shown = BOSS_KINDS.filter(
+    (b) => selected.includes(b) || isUnlocked(loadout, b),
+  );
+
   return (
-    <div className="flex gap-2 flex-wrap">
-      {BOSS_KINDS.map((boss) => {
+    <div className="flex gap-2 flex-wrap items-center">
+      {shown.map((boss) => {
         const isOn = selected.includes(boss);
-        // A rule that builds on another cannot be switched on before it, the
-        // same way a run only ever steps up to it.
-        const locked = !isOn && !isUnlocked(loadout, boss);
-        const needs = requires(boss).map((r) => BOSS_INFO[r].name).join(', ');
+        const built = requires(boss).length > 0;
         return (
           <button
             key={boss}
             onClick={() => onToggle(boss)}
-            disabled={locked}
             aria-pressed={isOn}
-            title={locked ? `Needs ${needs} first` : BOSS_INFO[boss].detail}
-            className={`inline-flex items-center gap-2 font-mono text-[11px] font-medium tracking-[0.1em] py-[7px] pl-[10px] pr-[14px] rounded-full border-[1.5px] transition-all duration-[120ms] ${
+            title={BOSS_INFO[boss].detail}
+            className={`inline-flex items-center gap-2 whitespace-nowrap font-mono text-[11px] font-medium tracking-[0.1em] py-[7px] pl-[10px] pr-[14px] rounded-full border-[1.5px] cursor-pointer transition-colors duration-[120ms] ${
+              built ? 'chip-unlocked' : ''
+            } ${
               isOn
-                ? 'bg-ink border-ink text-sand cursor-pointer'
-                : locked
-                  ? 'bg-transparent border-ink/15 text-ink/25 cursor-default'
-                  : 'bg-transparent border-ink/35 text-muted hover:border-ink/55 hover:text-ink cursor-pointer'
+                ? 'bg-ink border-ink text-sand'
+                : 'bg-transparent border-ink/35 text-muted hover:border-ink/55 hover:text-ink'
             }`}
           >
             <svg width="13" height="13" viewBox="0 0 42 42" aria-hidden="true">
@@ -45,9 +48,6 @@ export function BossPills({ selected, onToggle }: BossPillsProps) {
               <circle cx="26.8" cy="19.5" r="3.6" fill="currentColor" />
             </svg>
             {BOSS_INFO[boss].name}
-            {locked && (
-              <span className="opacity-60 tracking-normal">· needs {needs}</span>
-            )}
           </button>
         );
       })}

@@ -1,7 +1,10 @@
-import { POSITIONS } from "../lib/data";
+import { CHORDS, POSITIONS, isSeventhIndex, seventhIndexOf } from "../lib/data";
+
+const SEVENTH_INDICES = CHORDS.map((_, i) => seventhIndexOf(i));
 import { PositionCard } from "../components/PositionCard";
 import { ChordPills } from "../components/ChordPills";
 import { BossPills } from "../components/BossPills";
+import { Section } from "../components/Section";
 import { useInvertSetting } from "../hooks/useInvertSetting";
 import { hiddenDegrees } from "../lib/modifiers";
 import type { BossKind } from "../lib/modifiers";
@@ -28,6 +31,7 @@ export function PositionSelect({
   onStart,
 }: PositionSelectProps) {
   const [invert] = useInvertSetting();
+  const seventhCount = selectedChordIndices.filter(isSeventhIndex).length;
   // The previews show what the switched-on rules will actually leave on the
   // neck, so the picker and the drill never disagree.
   const hidden = hiddenDegrees({
@@ -51,19 +55,30 @@ export function PositionSelect({
         </span>
       </div>
 
-      <div className="flex flex-col gap-2.5">
-        <div className="font-mono text-[10.5px] font-medium tracking-[0.14em] uppercase text-muted-light">
-          Chords
-        </div>
+      <Section title="Chords">
         <ChordPills selected={selectedChordIndices} onToggle={onToggleChord} />
-      </div>
+      </Section>
 
-      <div className="flex flex-col gap-2.5">
-        <div className="font-mono text-[10.5px] font-medium tracking-[0.14em] uppercase text-muted-light">
-          Rules
-        </div>
+      {/* Their own chords, switched on independently of the triads. */}
+      <Section
+        title="7th chords"
+        collapsible
+        summary={seventhCount ? `${seventhCount} on` : undefined}
+      >
+        <ChordPills
+          selected={selectedChordIndices}
+          onToggle={onToggleChord}
+          indices={SEVENTH_INDICES}
+        />
+      </Section>
+
+      <Section
+        title="Modifiers"
+        collapsible
+        summary={bosses.length ? `${bosses.length} on` : undefined}
+      >
         <BossPills selected={bosses} onToggle={onToggleBoss} />
-      </div>
+      </Section>
 
       <div className="flex flex-col gap-2.5 flex-1 overflow-hidden">
         <div className="font-mono text-[10.5px] font-medium tracking-[0.14em] uppercase text-muted-light">

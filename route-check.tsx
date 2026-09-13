@@ -77,16 +77,38 @@ check("menu at /note-finder shows the note-finder background", menu.includes("--
 check("menu at / shows the arpeggio background", at("/").includes("--color-sand"));
 check("menu at /note-finder is slid to the second title", menu.includes("-50%"));
 
-console.log("\nboss rules on the practice setup screen:");
-check("practice setup offers the rules row", at("/arpeggio/positions").includes("Rules"));
-check("…with every boss named",
-  ["No Mistakes", "Pentatonic Only", "Root Only"].every((n) =>
-    at("/arpeggio/positions").includes(n)));
+console.log("\nthe practice setup sections:");
+{
+  const html = at("/arpeggio/positions");
+  check("Chords and Positions are the always-open two",
+    html.includes("Chords") && html.includes("Positions"));
+  check("7th chords has its own section", html.includes("7th chords"));
+  check("Rules is now called Modifiers",
+    html.includes("Modifiers") && !html.includes(">Rules<"));
+
+  // Both extras start shut: their row collapses to nothing until opened.
+  const shut = (html.match(/grid-template-rows:0fr/g) ?? []).length;
+  check(`both optional sections start collapsed (${shut})`, shut === 2);
+  check("…and are expandable", (html.match(/aria-expanded="false"/g) ?? []).length === 2);
+  // Sevenths are their own chords, so all seven are offered regardless of
+  // which triads are on.
+  check("all seven sevenths are offered",
+    ["Imaj7", "ii7", "iii7", "IVmaj7", "V7", "vi7", "viiø7"].every((r) =>
+      html.includes(r)));
+  check("…and the triads are still their own row",
+    ["I", "ii", "iii", "IV", "V", "vi", "vii°"].every((r) => html.includes(r)));
+}
+
 // Root Only is a step up, so it starts out locked behind its prerequisite.
-check("Root Only starts locked, and says what it needs",
-  at("/arpeggio/positions").includes("needs Pentatonic Only"));
-check("…and is genuinely not pressable",
-  at("/arpeggio/positions").includes("disabled"));
+console.log("\nboss rules on the practice setup screen:");
+// A rule built on another is not offered at all until its prerequisite is on.
+check("Root Only is not shown until Pentatonic Only is",
+  !at("/arpeggio/positions").includes("Root Only"));
+check("In Order is not shown until No Mistakes is",
+  !at("/arpeggio/positions").includes("In Order"));
+check("…and the two standalone rules are",
+  at("/arpeggio/positions").includes("No Mistakes") &&
+    at("/arpeggio/positions").includes("Pentatonic Only"));
 check("…and its effect spelled out",
   at("/arpeggio/positions").includes("A wrong note costs a life and ends the drill"));
 check("the game setup screen does not — a run imposes its own",
@@ -94,7 +116,17 @@ check("the game setup screen does not — a run imposes its own",
 
 console.log("\nthe game routes:");
 check("/arpeggio/game/setup asks for one position", at("/arpeggio/game/setup").includes("pick one"));
-check("…and exactly 3 chords", at("/arpeggio/game/setup").includes("0/3"));
+// It opens on a playable hand, so Play can be a single tap.
+check("…already holding 3 chords", at("/arpeggio/game/setup").includes("3/3"));
+{
+  // The Start run button's own tag, so a disabled attribute elsewhere on the
+  // page cannot be mistaken for this one.
+  const html = at("/arpeggio/game/setup");
+  const end = html.indexOf("Start run");
+  const tag = html.slice(html.lastIndexOf("<button", end), end);
+  // The attribute, not the Tailwind `disabled:` variants in the class list.
+  check("…with Start run ready to press", !tag.includes('disabled="'));
+}
 // A run has no hand on a cold load, so the URL must not strand the player.
 check("/arpeggio/game with no hand falls back to setup", at("/arpeggio/game").includes("Start run"));
 check("the menu offers a game", at("/").includes("Play →"));

@@ -1,4 +1,4 @@
-import { CHORDS, positionById } from '../lib/data';
+import { CHORDS, SEVENTH_CHORDS, positionById } from '../lib/data';
 import type { Degree } from '../lib/data';
 import { BOSS_HIDES, RUSH_SECONDS, modifierInfo } from '../lib/modifiers';
 import type { Modifier } from '../lib/modifiers';
@@ -45,17 +45,60 @@ function Visual({
     );
   }
 
-  if (modifier.kind === 'chord') {
+  if (modifier.kind === 'chord' || modifier.kind === 'seventh') {
+    // A seventh shows the chord it becomes, with the added degree picked out —
+    // the card is an upgrade, so it says what you end up holding.
+    const c =
+      modifier.kind === 'seventh'
+        ? SEVENTH_CHORDS[modifier.chordIdx]
+        : CHORDS[modifier.chordIdx];
     return (
-      <div className="flex items-center justify-center">
-        <span className="font-serif italic font-normal text-[44px] leading-none text-amber">
-          {CHORDS[modifier.chordIdx].rank}
+      <div className="flex flex-col items-center justify-center gap-0.5">
+        <span
+          className={`font-serif italic font-normal leading-none text-amber ${
+            c.rank.length > 3 ? 'text-[30px]' : 'text-[44px]'
+          }`}
+        >
+          {c.rank}
         </span>
+        {modifier.kind === 'seventh' && (
+          <span className="font-mono text-[10px] tracking-[0.08em] text-muted">
+            {c.degrees.slice(0, -1).join(' ')}{' '}
+            <span className="text-amber font-semibold">
+              +{c.degrees[c.degrees.length - 1]}
+            </span>
+          </span>
+        )}
       </div>
     );
   }
 
   if (modifier.kind === 'boss') {
+    // In Order: three notes climbing, with an arrow up the middle.
+    if (modifier.boss === 'ordered') {
+      return (
+        <svg width="52" height="40" viewBox="0 0 52 40" aria-hidden="true">
+          {[0, 1, 2].map((i) => (
+            <circle
+              key={i}
+              cx={9 + i * 17}
+              cy={31 - i * 10}
+              r={5.5}
+              fill="var(--color-amber)"
+            />
+          ))}
+          <path
+            d="M6 36 L44 6 M44 6 L36 7 M44 6 L43 14"
+            stroke="var(--color-wrong)"
+            strokeWidth="1.6"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      );
+    }
+
     // A rule that thins the neck shows the seven degrees, with the ones it
     // takes away drawn as empty rings.
     const hides = BOSS_HIDES[modifier.boss];
@@ -152,18 +195,16 @@ export function ModifierCard({
   onChoose,
 }: ModifierCardProps) {
   const { name, detail } = modifierInfo(modifier);
-  // A boss is imposed, not offered: dark card, no hover, nothing to click.
+  // A boss card is picked like any other; it just looks like bad news.
   const isBoss = modifier.kind === 'boss';
 
   return (
     <button
       onClick={(e) => onChoose(e.currentTarget)}
-      disabled={state !== 'idle' || isBoss}
+      disabled={state !== 'idle'}
       // One fixed ratio for every card, whatever it holds and however wide the
       // column it lands in — a deck of one shape.
-      className={`modifier-card group relative block aspect-[4/5] w-full sm:w-[180px] ${
-        isBoss ? 'cursor-default' : 'cursor-pointer'
-      } ${
+      className={`modifier-card group relative block cursor-pointer aspect-[4/5] w-full sm:w-[180px] ${
         centered ? 'max-sm:col-span-2 max-sm:w-[calc(50%-6px)] max-sm:mx-auto' : ''
       } ${state === 'chosen' ? 'card-chosen' : ''} ${
         state === 'dismissed' ? 'card-dismissed' : ''
@@ -179,7 +220,9 @@ export function ModifierCard({
         <span
           className={`card-face flex flex-col items-center justify-center gap-3 text-center border-2 p-4 transition-colors duration-150 ${
             isBoss
-              ? 'bg-ink border-wrong'
+              ? state === 'chosen'
+                ? 'bg-ink border-amber'
+                : 'bg-ink border-wrong group-hover:border-amber'
               : state === 'chosen'
                 ? 'bg-sand border-amber'
                 : 'bg-sand border-ink/20 group-hover:border-amber'

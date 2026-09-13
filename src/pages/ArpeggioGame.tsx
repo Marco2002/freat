@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
-  CHORDS,
+  ALL_CHORDS,
+  ascendingKeys,
   chordKeysIn,
   keysOf,
   positionById,
@@ -9,6 +10,7 @@ import {
 import { playChord, playTick } from "../lib/audio";
 import {
   MODIFIER_INTERVAL,
+  isMiss,
   PANIC_SECONDS,
   RUN_LIVES,
   clockColor,
@@ -18,7 +20,7 @@ import {
   runReducer,
 } from "../lib/game";
 import type { RunState } from "../lib/game";
-import { BOSS_INFO, hiddenDegrees, modifierId } from "../lib/modifiers";
+import { hiddenDegrees, modifierId } from "../lib/modifiers";
 import type { Modifier } from "../lib/modifiers";
 import { Fretboard } from "../components/Fretboard";
 import { Hearts } from "../components/Hearts";
@@ -60,7 +62,8 @@ export function ArpeggioGame({
   // draws from, and the neck slides between them as it does in practice.
   const place = run.place;
   const position = positionById(place.id);
-  const chord = CHORDS[run.chordIdx];
+  // The roster holds triads and sevenths alike, so this is simply a lookup.
+  const chord = ALL_CHORDS[run.chordIdx];
 
   const hidden = hiddenDegrees(run);
   // With notes taken off the neck, every fret in the window is in play.
@@ -71,6 +74,12 @@ export function ArpeggioGame({
   const targetKeys = useMemo(
     () => chordKeysIn(place.notes, chord),
     [place, chord],
+  );
+
+  // The note In Order is waiting for: the lowest of the arpeggio not yet down.
+  const nextKey = useMemo(
+    () => ascendingKeys(place.notes, targetKeys).find((k) => !run.selected.has(k)),
+    [place, targetKeys, run.selected],
   );
 
   const live = run.stage === "running" && run.phase === "playing";
@@ -114,9 +123,9 @@ export function ArpeggioGame({
     return () => clearTimeout(t);
   }, [run.phase, run.stage]);
 
-  const missed =
-    run.stage === "running" &&
-    (run.phase === "timeout" || run.phase === "wrong");
+  const missed = run.stage === "running" && isMiss(run.phase);
+  // A rule was broken, as opposed to the clock simply running out.
+  const mistake = run.phase === "wrong" || run.phase === "disorder";
 
   const secondsLeft = Math.ceil(leftMs / 1000);
   const fraction = leftMs / drillMs(run);
@@ -234,6 +243,8 @@ export function ArpeggioGame({
             "out of time"
           ) : run.phase === "wrong" ? (
             "not in the arpeggio"
+          ) : run.phase === "disorder" ? (
+            "out of order — lowest first"
           ) : (
             <>
               {chord.quality} <span className="opacity-45 mx-1">—</span>{" "}
@@ -243,8 +254,8 @@ export function ArpeggioGame({
         </div>
       </div>
 
-      {/* A wrong note, not merely a miss: the screen flashes with the wiggle. */}
-      {run.phase === "wrong" && (
+      {/* A broken rule, not merely a miss: the screen flashes with the wiggle. */}
+      {mistake && (
         <div className="panic-flash fixed inset-0 z-10" aria-hidden="true" />
       )}
 
@@ -263,8 +274,14 @@ export function ArpeggioGame({
           }
           invert={invert}
           hiddenDegrees={hidden}
+          wrongKey={run.wrongKey}
           onToggle={(key) =>
-            dispatch({ type: "toggle", key, isTarget: targetKeys.has(key) })
+            dispatch({
+              type: "toggle",
+              key,
+              isTarget: targetKeys.has(key),
+              isNext: key === nextKey,
+            })
           }
           compact={isMobile}
         />
@@ -330,23 +347,11 @@ export function ArpeggioGame({
         />
       )}
 
-      {run.stage === "boss" && (
-        <BossPause
-          run={run}
-          onContinue={() =>
-            dispatch({
-              type: "choose",
-              modifier: run.offers[0],
-              at: Date.now(),
-            })
-          }
-        />
-      )}
-
-      {run.stage === "modifier" && (
-        <ModifierPause
+      {(run.stage === "modifier" || run.stage === "boss") && (
+        <ChoicePause
           run={run}
           invert={invert}
+          boss={run.stage === "boss"}
           onChoose={(modifier) =>
             dispatch({ type: "choose", modifier, at: Date.now() })
           }
@@ -356,76 +361,25 @@ export function ArpeggioGame({
   );
 }
 
-/**
- * Every fourth pause is not a choice. The card is dealt face up with no
- * alternatives beside it — the only thing to do is look at the new rule and
- * play on.
- */
-function BossPause({
-  run,
-  onContinue,
-}: {
-  run: RunState;
-  onContinue: () => void;
-}) {
-  const boss = run.offers[0];
-  const blurb = boss?.kind === "boss" ? BOSS_INFO[boss.boss].blurb : "";
-
-  return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center bg-sand/95 px-5 py-8 overflow-y-auto">
-      <div className="flex flex-col items-center gap-7 text-center max-w-[420px] w-full my-auto">
-        <div className="flex flex-col items-center gap-1.5">
-          <span className="font-mono text-[10.5px] font-medium tracking-[0.16em] uppercase text-wrong">
-            Boss · {run.drills} drills in
-          </span>
-          <span className="font-serif italic font-normal text-[clamp(34px,8vw,52px)] leading-[0.95] tracking-[-0.02em] text-ink">
-            New rule
-          </span>
-        </div>
-
-        <div className="modifier-table flex justify-center w-full">
-          {boss && (
-            <ModifierCard
-              modifier={boss}
-              invert={false}
-              hiddenDegrees={hiddenDegrees(run)}
-              index={0}
-              onChoose={() => {}}
-            />
-          )}
-        </div>
-
-        <div className="flex flex-col items-center gap-4">
-          <span className="font-mono text-[11.5px] leading-[1.6] tracking-[0.02em] text-muted max-w-[300px]">
-            {blurb}
-          </span>
-          <button
-            className="bg-ink text-sand border-none font-mono text-xs font-medium tracking-[0.14em] uppercase py-4 px-11 rounded-full cursor-pointer transition-opacity duration-150 hover:opacity-80"
-            onClick={onContinue}
-          >
-            Face it →
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /** How long the taken card flies and spins before the run picks back up. */
 const TAKE_MS = 850;
 
 /**
- * The pause the run takes every {@link MODIFIER_INTERVAL} drills: three cards,
- * one of which must be taken. There is no way past this without choosing — the
- * run is meant to get harder, and the only say the player has is how.
+ * A pause, of either kind: cards on the table, one of which must be taken.
+ * There is no way past without choosing — the run is meant to get harder, and
+ * the only say the player has is how.
+ *
+ * Boss pauses differ only in what is dealt: fewer cards, none of them a gift.
  */
-function ModifierPause({
+function ChoicePause({
   run,
   invert,
+  boss,
   onChoose,
 }: {
   run: RunState;
   invert: boolean;
+  boss: boolean;
   onChoose: (modifier: Modifier) => void;
 }) {
   // Which card was taken, and how far it has to travel to reach the middle.
@@ -450,9 +404,11 @@ function ModifierPause({
       },
     });
     // Someone who has asked for less motion should not sit through the flight.
-    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     timer.current = setTimeout(() => onChoose(mod), still ? 120 : TAKE_MS);
   };
+
+  const only = run.offers.length === 1;
 
   return (
     <div
@@ -466,11 +422,17 @@ function ModifierPause({
             taken ? "opacity-0" : "opacity-100"
           }`}
         >
-          <span className="font-mono text-[10.5px] font-medium tracking-[0.16em] uppercase text-muted-light">
-            {run.drills} drills · {run.score} cleared
+          <span
+            className={`font-mono text-[10.5px] font-medium tracking-[0.16em] uppercase ${
+              boss ? "text-wrong" : "text-muted-light"
+            }`}
+          >
+            {boss
+              ? `Boss · ${run.drills} drills in`
+              : `${run.drills} drills · ${run.score} cleared`}
           </span>
           <span className="font-serif italic font-normal text-[clamp(34px,8vw,52px)] leading-[0.95] tracking-[-0.02em] text-ink">
-            Take one
+            {boss ? (only ? "New rule" : "Pick your rule") : "Take one"}
           </span>
         </div>
 
@@ -486,9 +448,7 @@ function ModifierPause({
                 invert={invert}
                 hiddenDegrees={hiddenDegrees(run)}
                 index={i}
-                centered={
-                  i === run.offers.length - 1 && run.offers.length % 2 === 1
-                }
+                centered={i === run.offers.length - 1 && only}
                 state={
                   !taken ? "idle" : taken.id === id ? "chosen" : "dismissed"
                 }
