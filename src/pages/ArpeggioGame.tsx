@@ -247,10 +247,7 @@ export function ArpeggioGame({
           ) : run.phase === "disorder" ? (
             "out of order — lowest first"
           ) : (
-            <>
-              {chord.quality} <span className="opacity-45 mx-1">—</span>{" "}
-              {chord.degrees.join("  ")}
-            </>
+            chord.quality
           )}
         </div>
       </div>
@@ -412,6 +409,10 @@ function ChoicePause({
   };
 
   const only = run.offers.length === 1;
+  // On a phone the cards sit two to a row, so an odd count strands the last one
+  // alone on the bottom row. That is the card that has to be centred — not just
+  // the lone-card case, which is merely the smallest odd count.
+  const oddOneOut = run.offers.length % 2 === 1;
 
   return (
     <div
@@ -451,7 +452,7 @@ function ChoicePause({
                 invert={invert}
                 hiddenDegrees={hiddenDegrees(run)}
                 index={i}
-                centered={i === run.offers.length - 1 && only}
+                centered={i === run.offers.length - 1 && oddOneOut}
                 state={
                   !taken ? "idle" : taken.id === id ? "chosen" : "dismissed"
                 }

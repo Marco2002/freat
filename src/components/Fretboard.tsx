@@ -19,7 +19,14 @@ import { playNote } from '../lib/audio';
 const PAD_T = 40, PAD_B = 28;
 const FRET_W = 124, FRET_W_COMPACT = 72, STRING_GAP = 48;
 const BOARD_OVERHANG_V = 22;
-const GUTTER_L = 44, GUTTER_R = 12; // string-label gutter, desktop only
+// Corner radius on the visible board, desktop only. The neck itself is one long
+// strip whose real ends are far off-screen, so the rounding lives on the camera
+// window — which is what the player actually sees the edges of.
+const BOARD_RADIUS = 16;
+// String-label gutter, desktop only. It is mirrored on the right so the neck
+// stays centred in the SVG: the labels hang in the left margin rather than
+// shoving the board across by their own width.
+const GUTTER = 44;
 const INNER_H = 5 * STRING_GAP;
 const BOARD_H = PAD_T + PAD_B + INNER_H;
 
@@ -106,10 +113,9 @@ export function Fretboard({
 
   const fretW = compact ? FRET_W_COMPACT : FRET_W;
   const windowFrets = compact ? WINDOW_FRETS_COMPACT : WINDOW_FRETS;
-  const gutterL = compact ? 0 : GUTTER_L;
-  const gutterR = compact ? 0 : GUTTER_R;
+  const gutter = compact ? 0 : GUTTER;
   const windowW = windowFrets * fretW;
-  const viewBoxW = gutterL + windowW + gutterR;
+  const viewBoxW = gutter * 2 + windowW;
 
   // Neck space: x is absolute in fret units and never changes with the active
   // position. neckX(f) is the left edge of fret f.
@@ -163,7 +169,7 @@ export function Fretboard({
   }
 
   const slide = {
-    transform: `translateX(${gutterL - neckX(windowStart)}px)`,
+    transform: `translateX(${gutter - neckX(windowStart)}px)`,
     transition: `transform ${cam.ms}ms cubic-bezier(0.66, 0, 0.24, 1)`,
   };
 
@@ -180,7 +186,18 @@ export function Fretboard({
           <stop offset="100%" stopColor="#1a1714" stopOpacity="0.5" />
         </linearGradient>
         <clipPath id={windowId}>
-          <rect x={gutterL} y={0} width={windowW} height={BOARD_H} />
+          {/* Desktop rounds the board's visible corners, so the clip has to end
+              where the timber does — otherwise the radius curves through the
+              empty padding and nothing shows. Mobile keeps the full-height
+              window: with no rounding to reveal, tightening it would only shave
+              the outer string's tap target for nothing. */}
+          <rect
+            x={gutter}
+            y={compact ? 0 : PAD_T - BOARD_OVERHANG_V}
+            width={windowW}
+            height={compact ? BOARD_H : INNER_H + BOARD_OVERHANG_V * 2}
+            rx={compact ? 0 : BOARD_RADIUS}
+          />
         </clipPath>
       </defs>
 
@@ -356,7 +373,7 @@ export function Fretboard({
       {!compact && STRING_LABELS.map((label, i) => (
         <text
           key={i}
-          x={gutterL - 16} y={stringY(i, invert)}
+          x={gutter - 16} y={stringY(i, invert)}
           fill="#7d7a72" fontSize={11.5}
           textAnchor="middle" dominantBaseline="central"
           fontFamily="'JetBrains Mono', monospace"

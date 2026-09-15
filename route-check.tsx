@@ -19,7 +19,7 @@ Object.assign(globalThis, {
 (globalThis as { matchMedia?: unknown }).matchMedia = globalThis.window.matchMedia;
 
 const { default: App } = await import("./src/App");
-const { pathToRoute, routeToPath, menuOf } = await import("./src/lib/routes");
+const { pathToRoute, routeToPath } = await import("./src/lib/routes");
 
 let failures = 0;
 const check = (label: string, ok: boolean, detail = "") => {
@@ -33,14 +33,12 @@ console.log("each path renders its own screen, and only its own, on a cold load:
 // Each marker is copy or markup unique to one screen, so a path rendering the
 // wrong page fails twice: its own marker is missing, and another path claims it.
 const cases: [string, string][] = [
-  ["/", 'style="transform:translateX(calc(0% + 0px))'],
-  ["/note-finder", 'style="transform:translateX(calc(-50% + 0px))'],
+  ["/", "Practice →"],
   ["/arpeggio/positions", "Start practice"],
   ["/arpeggio/drill", "tap every note of the"],
-  ["/arpeggio/theory", ">Chord<"],
-  ["/note-finder/drill", "grid-cols-4"],
-  ["/note-finder/theory", "Scale Degrees"],
+  ["/arpeggio/theory", ">base<"],
   ["/arpeggio/game/setup", "Start run"],
+  ["/arpeggio/collection", "The staple gift."],
 ];
 const rendered = new Map(cases.map(([p]) => [p, at(p)]));
 for (const [p, marker] of cases) {
@@ -56,26 +54,14 @@ check("/nonsense → menu", at("/nonsense").includes(cases[0][1]));
 
 console.log("\nevery route round-trips through its path:");
 for (const [p] of cases) {
-  const rt = pathToRoute(p);
-  check(`${p} → ${rt.screen}/${rt.mode} → ${routeToPath(rt)}`, routeToPath(rt) === p);
+  const screen = pathToRoute(p);
+  check(`${p} → ${screen} → ${routeToPath(screen)}`, routeToPath(screen) === p);
 }
-check("trailing slash tolerated", routeToPath(pathToRoute("/note-finder/")) === "/note-finder");
+check("trailing slash tolerated",
+  routeToPath(pathToRoute("/arpeggio/theory/")) === "/arpeggio/theory");
 
-console.log("\nback from a note-finder screen opens the menu on the note-finder half:");
-for (const p of ["/note-finder/drill", "/note-finder/theory"]) {
-  const { mode } = pathToRoute(p);
-  check(`${p} → back → ${routeToPath(menuOf(mode))}`, routeToPath(menuOf(mode)) === "/note-finder");
-}
-for (const p of ["/arpeggio/positions", "/arpeggio/theory"]) {
-  const { mode } = pathToRoute(p);
-  check(`${p} → back → ${routeToPath(menuOf(mode))}`, routeToPath(menuOf(mode)) === "/");
-}
-
-// The menu must actually open on the note-finder side, not merely route there.
-const menu = at("/note-finder");
-check("menu at /note-finder shows the note-finder background", menu.includes("--color-slate"));
-check("menu at / shows the arpeggio background", at("/").includes("--color-sand"));
-check("menu at /note-finder is slid to the second title", menu.includes("-50%"));
+console.log("\nback from any screen opens the menu:");
+check("back → /", routeToPath("menu") === "/");
 
 console.log("\nthe practice setup sections:");
 {
@@ -134,7 +120,23 @@ check("…already holding 3 chords", at("/arpeggio/game/setup").includes("3/3"))
 // A run has no hand on a cold load, so the URL must not strand the player.
 check("/arpeggio/game with no hand falls back to setup", at("/arpeggio/game").includes("Start run"));
 check("the menu offers a game", at("/").includes("Play →"));
-check("…only on the arpeggio side", !at("/note-finder").includes("Play →"));
+// The collection is a corner icon now, so its label is the accessible one.
+check("…and a way into the collection", at("/").includes('aria-label="Collection"'));
+
+console.log("\nthe collection shows one card of every family:");
+{
+  const html = at("/arpeggio/collection");
+  for (const band of ["Chord", "Seventh", "Position", "Rush", "Boss"]) {
+    // The family band, not the section heading — it is the card itself that
+    // has to carry the label. The card face is SVG, so the band is a <text>.
+    check(
+      `a ${band} card is on the shelf`,
+      html.includes(`>${band.toUpperCase()}</text>`),
+    );
+  }
+  check("…and the cards are inert here, not offers",
+    !html.includes("modifier-card"));
+}
 
 console.log(failures === 0 ? "\nALL CHECKS PASSED" : `\n${failures} CHECK(S) FAILED`);
 if (failures) process.exit(1);

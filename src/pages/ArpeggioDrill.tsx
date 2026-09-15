@@ -101,20 +101,6 @@ export function ArpeggioDrill({
     [place, targetKeys, selected],
   );
 
-
-  useEffect(() => {
-    if (phase !== "playing") return;
-    if (selected.size !== targetKeys.size) return;
-    for (const k of targetKeys) if (!selected.has(k)) return;
-    setPhase("success");
-    setStreak((s) => s + 1);
-    playChord(
-      position.notes
-        .filter((n) => chord.tones.includes(n.degree))
-        .map(({ s, f }) => ({ string: s, fret: f })),
-    );
-  }, [selected, phase, targetKeys]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const nextDrill = () => {
     setChordIdx((idx) => pickNextChord(idx, selectedChordIndices));
     setPlace((p) => nextPlacement(p, selectedPositionIds));
@@ -149,11 +135,23 @@ export function ArpeggioDrill({
       setSelected((prev) => new Set(prev).add(key));
       return;
     }
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
+    // Built up front rather than inside the updater, because the clear is judged
+    // off the selection this very tap produces — a tap can also take a note back
+    // out, and that must be able to un-finish the arpeggio just as well.
+    const next = new Set(selected);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    setSelected(next);
+
+    if (next.size !== targetKeys.size) return;
+    for (const k of targetKeys) if (!next.has(k)) return;
+    setPhase("success");
+    setStreak((s) => s + 1);
+    playChord(
+      position.notes
+        .filter((n) => chord.tones.includes(n.degree))
+        .map(({ s, f }) => ({ string: s, fret: f })),
+    );
   };
 
   // Skipping shows the answer too — the point of giving up on one is to see it.
@@ -240,10 +238,7 @@ export function ArpeggioDrill({
           ) : miss === "skipped" ? (
             "here it is"
           ) : (
-            <>
-              {chord.quality} <span className="opacity-45 mx-1">—</span>{" "}
-              {chord.degrees.join("  ")}
-            </>
+            chord.quality
           )}
         </div>
       </div>

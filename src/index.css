@@ -2,7 +2,6 @@
 
 @theme {
   --color-sand: #f0eee9;
-  --color-slate: #bdcdd6;
   --color-ink: #29261b;
   --color-muted-dark: #6c675e;
   --color-muted: #5f5c54;
@@ -147,15 +146,45 @@
   }
 }
 
+/* A heart bought back at a boss. The full heart's subtree only mounts when a
+   heart refills, so the animation needs no state to trigger it — the same
+   trick the shards use for a loss, run the other way. It also plays as a run
+   opens, which reads as the hearts being dealt. */
+.heart-restore {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: heart-restore 0.6s cubic-bezier(0.25, 0.9, 0.3, 1) backwards;
+}
+@keyframes heart-restore {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+  78% {
+    transform: scale(0.93);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 /* Modifier cards drift in, then hang and bob gently — floating, so they read
    as something offered rather than part of the page. */
 .modifier-card {
   animation:
     card-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) backwards,
-    card-float 4.5s ease-in-out infinite;
+    card-float var(--float-dur, 7400ms) linear infinite;
   /* --card-delay staggers the deal; the float starts once that card has
-     landed, so the two never fight over the transform. */
-  animation-delay: var(--card-delay, 0ms), calc(var(--card-delay, 0ms) + 0.45s);
+     landed, so the two never fight over the transform. --float-lead then
+     offsets each card's first rise, and --float-dur gives it a period of its
+     own, so the cards bob independently instead of as one block. */
+  animation-delay: var(--card-delay, 0ms),
+    calc(var(--card-delay, 0ms) + 0.45s + var(--float-lead, 0ms));
   /* Two real faces, so a turning card shows its back rather than its own
      content mirrored. */
   transform-style: preserve-3d;
@@ -188,13 +217,67 @@
     transform: translateY(0) scale(1);
   }
 }
+/* The card hangs in space and turns, rather than sliding around the page —
+   the tilt is what sells it as an object with a front and a back. rotateY runs
+   at twice the rate of the lift and rotateX, so the corners trace a slow gyre
+   instead of rocking on one flat axis. Every axis is a whole number of cycles,
+   so the loop wraps with no jolt, and each card carries its own perspective so
+   it pivots about its own centre wherever it sits in the row. The stops sample
+   a sine, hence linear — easing each segment would pulse at every stop. */
 @keyframes card-float {
-  0%,
-  100% {
-    transform: translateY(0);
+  0% {
+    transform: perspective(900px)
+      translateY(0px)
+      rotateX(0deg)
+      rotateY(0deg);
+  }
+  12.5% {
+    transform: perspective(900px)
+      translateY(calc(-0.707 * var(--float-lift, 3px)))
+      rotateX(calc(0.707 * var(--tilt-x, 3deg)))
+      rotateY(var(--tilt-y, 4deg));
+  }
+  25% {
+    transform: perspective(900px)
+      translateY(calc(-1 * var(--float-lift, 3px)))
+      rotateX(var(--tilt-x, 3deg))
+      rotateY(0deg);
+  }
+  37.5% {
+    transform: perspective(900px)
+      translateY(calc(-0.707 * var(--float-lift, 3px)))
+      rotateX(calc(0.707 * var(--tilt-x, 3deg)))
+      rotateY(calc(-1 * var(--tilt-y, 4deg)));
   }
   50% {
-    transform: translateY(-5px);
+    transform: perspective(900px)
+      translateY(0px)
+      rotateX(0deg)
+      rotateY(0deg);
+  }
+  62.5% {
+    transform: perspective(900px)
+      translateY(calc(0.707 * var(--float-lift, 3px)))
+      rotateX(calc(-0.707 * var(--tilt-x, 3deg)))
+      rotateY(var(--tilt-y, 4deg));
+  }
+  75% {
+    transform: perspective(900px)
+      translateY(var(--float-lift, 3px))
+      rotateX(calc(-1 * var(--tilt-x, 3deg)))
+      rotateY(0deg);
+  }
+  87.5% {
+    transform: perspective(900px)
+      translateY(calc(0.707 * var(--float-lift, 3px)))
+      rotateX(calc(-0.707 * var(--tilt-x, 3deg)))
+      rotateY(calc(-1 * var(--tilt-y, 4deg)));
+  }
+  100% {
+    transform: perspective(900px)
+      translateY(0px)
+      rotateX(0deg)
+      rotateY(0deg);
   }
 }
 

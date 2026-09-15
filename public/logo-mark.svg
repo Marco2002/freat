@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 320" width="400" height="320" role="img" aria-label="Arpeggio Drill">
+  <title>Arpeggio Drill</title>
+  <!-- Untiled mark for use on the app's own sand ground (headers, lockups).
+       currentColor drives the strings so it inherits ink or sand. -->
+  <g stroke="currentColor" opacity="0.28" stroke-linecap="round" fill="none">
+    <path d="M24 40H376" stroke-width="3.5"/>
+    <path d="M24 120H376" stroke-width="5"/>
+    <path d="M24 200H376" stroke-width="7"/>
+    <path d="M24 280H376" stroke-width="9"/>
+  </g>
+  <circle cx="68" cy="280" r="28" fill="#e0a458"/>
+  <circle cx="156" cy="200" r="28" fill="currentColor"/>
+  <circle cx="244" cy="120" r="28" fill="currentColor"/>
+  <circle cx="332" cy="40" r="28" fill="#c1551f"/>
+</svg>

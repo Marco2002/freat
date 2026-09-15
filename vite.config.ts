@@ -12,7 +12,7 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] }),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons.svg'],
+      includeAssets: ['favicon.svg', 'logo.svg', 'logo-mark.svg', 'logo-maskable.svg', 'icons.svg'],
       manifest: {
         name: 'Arpeggio Drill',
         short_name: 'Arpeggio',
@@ -24,13 +24,15 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'favicon.svg',
+            src: 'logo.svg',
             sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'any',
           },
           {
-            src: 'favicon.svg',
+            // Full-bleed cut with the mark inside the 80% safe circle, so a
+            // launcher that crops to a circle or squircle keeps it whole.
+            src: 'logo-maskable.svg',
             sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'maskable',

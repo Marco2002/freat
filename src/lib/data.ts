@@ -1,35 +1,3 @@
-export const CHROMATIC_NOTES = [
-  "C",
-  "C#",
-  "D",
-  "D#",
-  "E",
-  "F",
-  "F#",
-  "G",
-  "G#",
-  "A",
-  "A#",
-  "B",
-] as const;
-export type ChromaticNote = (typeof CHROMATIC_NOTES)[number];
-
-// Display labels for each chromatic note — black keys include the enharmonic flat name
-export const NOTE_LABELS: readonly { name: string; alt?: string }[] = [
-  { name: "C" },
-  { name: "C#", alt: "Db" },
-  { name: "D" },
-  { name: "D#", alt: "Eb" },
-  { name: "E" },
-  { name: "F" },
-  { name: "F#", alt: "Gb" },
-  { name: "G" },
-  { name: "G#", alt: "Ab" },
-  { name: "A" },
-  { name: "A#", alt: "Bb" },
-  { name: "B" },
-];
-
 // The major pentatonic is the major scale without its two half-step tensions,
 // the 4th and the 7th — the notes that are hardest to place by ear.
 export const PENTATONIC_DEGREES = [1, 2, 3, 5, 6] as const;
@@ -37,10 +5,6 @@ export const NON_PENTATONIC_DEGREES = [4, 7] as const;
 
 // Semitone offsets from root for each major scale degree (I–VII)
 export const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11] as const;
-
-export function getScaleNote(keyIdx: number, degreeIdx: number): ChromaticNote {
-  return CHROMATIC_NOTES[(keyIdx + MAJOR_INTERVALS[degreeIdx]) % 12];
-}
 
 export const STRING_LABELS = ["E", "A", "D", "G", "B", "E"] as const;
 export const STRING_THICKNESS = [2.4, 2.0, 1.7, 1.3, 1.0, 0.8] as const;

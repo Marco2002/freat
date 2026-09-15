@@ -262,10 +262,10 @@ console.log("\na long run keeps working as the pool empties:");
 
 console.log("\nevery 4th pause is a boss, not a choice:");
 {
-  check("pauses 1-3 are ordinary", [0, 1, 2].every((n) => !isBossPause(n)));
-  check("pause 4 is a boss", isBossPause(3));
-  check("pauses 5-7 are ordinary", [4, 5, 6].every((n) => !isBossPause(n)));
-  check("pause 8 is a boss", isBossPause(7));
+  check("pauses 1-2 are ordinary", [0, 1].every((n) => !isBossPause(n)));
+  check("pause 3 is a boss", isBossPause(2));
+  check("pauses 4-5 are ordinary", [3, 4].every((n) => !isBossPause(n)));
+  check("pause 6 is a boss", isBossPause(5));
 
   // Walk a real run and record what each pause turns out to be.
   let s = fresh();

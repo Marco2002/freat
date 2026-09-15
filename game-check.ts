@@ -11,6 +11,7 @@ import {
   runReducer,
 } from "./src/lib/game";
 import type { RunState } from "./src/lib/game";
+import { BOSS_INTERVAL } from "./src/lib/modifiers";
 
 let fail = 0;
 const check = (label: string, ok: boolean) => {
@@ -99,13 +100,14 @@ console.log(`\nevery ${MODIFIER_INTERVAL} drills pauses for a modifier:`);
   const pauses: number[] = [];
   for (let i = 0; i < 30; i++) {
     s = settle(s, true, T0 + i * 40000);
-    if (s.stage === "modifier") {
+    if (s.stage === "modifier" || s.stage === "boss") {
+      const stage = s.stage;
       pauses.push(s.drills);
       // Time passing behind a pause must not cost anything: the clock is
       // stopped, so an expiry arriving here is refused outright.
       const stale = runReducer(s, { type: "expired" });
       check(`  drill ${s.drills}: time cannot run out behind the pause`,
-        stale.lives === s.lives && stale.stage === "modifier");
+        stale.lives === s.lives && stale.stage === stage);
       // Taking a card is what resumes the run; there is no way past without one.
       s = runReducer(s, { type: "choose", modifier: s.offers[0], at: T0 + i * 40000 + 50000 });
       check(`  drill ${s.drills}: resuming gives a full clock`,
@@ -113,6 +115,37 @@ console.log(`\nevery ${MODIFIER_INTERVAL} drills pauses for a modifier:`);
     }
   }
   check(`pauses at ${pauses.join(", ")}`, JSON.stringify(pauses) === JSON.stringify([10, 20, 30]));
+}
+
+console.log(`\nevery ${BOSS_INTERVAL} picks the pause is a boss, and pays a heart:`);
+{
+  let s = fresh();
+  // Drop a life first, so a restore has something to give back.
+  s = settle(s, false, T0);
+  check(`a miss costs a life (${s.lives})`, s.lives === RUN_LIVES - 1);
+
+  const stages: string[] = [];
+  let restored: number | null = null;
+  for (let i = 1; i < 40; i++) {
+    s = settle(s, true, T0 + i * 40000);
+    if (s.stage !== "modifier" && s.stage !== "boss") continue;
+    stages.push(s.stage);
+    const before = s.lives;
+    s = runReducer(s, {
+      type: "choose",
+      modifier: s.offers[0],
+      at: T0 + i * 40000 + 50000,
+    });
+    if (stages[stages.length - 1] === "boss" && restored === null)
+      restored = s.lives - before;
+  }
+  check(`the ${BOSS_INTERVAL}rd pause is the boss (${stages.join(", ")})`,
+    stages[BOSS_INTERVAL - 1] === "boss");
+  check("the two before it are ordinary",
+    stages.slice(0, BOSS_INTERVAL - 1).every((st) => st === "modifier"));
+  check(`taking the boss hands one heart back (+${restored})`, restored === 1);
+  check(`and never banks past the starting ${RUN_LIVES} (${s.lives})`,
+    s.lives <= RUN_LIVES);
 }
 
 console.log("\nthe last life ending on a modifier drill: run over wins:");

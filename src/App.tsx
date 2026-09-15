@@ -5,16 +5,14 @@ import { ArpeggioDrill } from './pages/ArpeggioDrill';
 import { GameSetup } from './pages/GameSetup';
 import { ArpeggioGame } from './pages/ArpeggioGame';
 import { TheoryPage } from './pages/TheoryPage';
-import { NoteFinderDrill } from './pages/NoteFinderDrill';
-import { NoteFinderTheory } from './pages/NoteFinderTheory';
+import { CollectionPage } from './pages/CollectionPage';
 import { useRoute } from './hooks/useRoute';
-import { menuOf } from './lib/routes';
 import { DEFAULT_RUN_CHORDS, DEFAULT_RUN_POSITION, RUN_CHORDS } from './lib/game';
 import { isUnlocked, pruneBosses } from './lib/modifiers';
 import type { BossKind } from './lib/modifiers';
 
 export default function App() {
-  const [route, navigate] = useRoute();
+  const [screen, navigate] = useRoute();
   const [selectedPositionIds, setSelectedPositionIds] = useState<number[]>([3]);
   const [selectedChordIndices, setSelectedChordIndices] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
   // Boss rules switched on for practice. In a run these are imposed instead.
@@ -70,30 +68,15 @@ export default function App() {
     );
   };
 
-  // Going back always lands on the menu already showing the mode just left.
-  const backToMenu = () => navigate(menuOf(route.mode));
-  const { screen, mode } = route;
+  const backToMenu = () => navigate('menu');
 
   if (screen === 'menu') {
     return (
       <MenuPage
-        mode={mode}
-        // Flipping the carousel is not a new screen, so it replaces rather than
-        // stacking an entry the back button would have to walk through.
-        onModeChange={(next) => navigate(menuOf(next), true)}
-        onGame={
-          mode === 'arpeggio'
-            ? () => navigate({ screen: 'game-setup', mode })
-            : undefined
-        }
-        onPractice={() =>
-          navigate(
-            mode === 'arpeggio'
-              ? { screen: 'positions', mode }
-              : { screen: 'drill', mode }
-          )
-        }
-        onTheory={() => navigate({ screen: 'theory', mode })}
+        onGame={() => navigate('game-setup')}
+        onPractice={() => navigate('positions')}
+        onTheory={() => navigate('theory')}
+        onCollection={() => navigate('collection')}
       />
     );
   }
@@ -109,7 +92,7 @@ export default function App() {
         onStart={() => {
           setHandChosen(true);
           setRunKey((k) => k + 1);
-          navigate({ screen: 'game', mode });
+          navigate('game');
         }}
       />
     );
@@ -133,7 +116,7 @@ export default function App() {
           onStart={() => {
             setHandChosen(true);
             setRunKey((k) => k + 1);
-            navigate({ screen: 'game', mode }, true);
+            navigate('game', true);
           }}
         />
       );
@@ -143,19 +126,19 @@ export default function App() {
         key={runKey}
         positionId={runPositionId}
         chordIndices={runChordIndices}
-        onQuit={() => navigate({ screen: 'game-setup', mode })}
-        onPlayAgain={() => navigate({ screen: 'game-setup', mode })}
+        onQuit={() => navigate('game-setup')}
+        onPlayAgain={() => navigate('game-setup')}
         onMenu={backToMenu}
       />
     );
   }
 
   if (screen === 'theory') {
-    return mode === 'arpeggio' ? (
-      <TheoryPage onBack={backToMenu} />
-    ) : (
-      <NoteFinderTheory onBack={backToMenu} />
-    );
+    return <TheoryPage onBack={backToMenu} />;
+  }
+
+  if (screen === 'collection') {
+    return <CollectionPage onBack={backToMenu} />;
   }
 
   if (screen === 'positions') {
@@ -168,13 +151,9 @@ export default function App() {
         bosses={practiceBosses}
         onToggleBoss={toggleBoss}
         onBack={backToMenu}
-        onStart={() => navigate({ screen: 'drill', mode })}
+        onStart={() => navigate('drill')}
       />
     );
-  }
-
-  if (mode === 'note-finder') {
-    return <NoteFinderDrill onBack={backToMenu} />;
   }
 
   return (
@@ -185,7 +164,7 @@ export default function App() {
       // The drill is reached through position select, so that is where back
       // goes — including on a cold load of /arpeggio/drill, where it is the
       // screen the player would have come through.
-      onBack={() => navigate({ screen: 'positions', mode })}
+      onBack={() => navigate('positions')}
     />
   );
 }

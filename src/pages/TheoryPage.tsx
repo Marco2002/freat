@@ -126,12 +126,14 @@ export function TheoryPage({ onBack }: TheoryPageProps) {
         <div className="font-mono text-[10.5px] font-medium tracking-[0.14em] uppercase text-muted-light">
           Position
         </div>
-        <div className="flex gap-2 flex-wrap max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2 flex-wrap max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:scrollbar-none max-sm:[&::-webkit-scrollbar]:hidden max-sm:-mx-4 max-sm:px-4">
           {POSITIONS.map((p) => (
             <button
               key={p.number}
               className={pillClass(place.id === p.number)}
-              onClick={() => setPlace((prev) => placePosition(p, prev.frets[0]))}
+              onClick={() =>
+                setPlace((prev) => placePosition(p, prev.frets[0]))
+              }
             >
               {p.number}
             </button>
@@ -146,7 +148,7 @@ export function TheoryPage({ onBack }: TheoryPageProps) {
           </span>
           <TabChips tabs={FAMILIES} active={family} onChange={setFamily} />
         </div>
-        <div className="flex gap-2 flex-wrap max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-2 flex-wrap max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:scrollbar-none max-sm:[&::-webkit-scrollbar]:hidden max-sm:-mx-4 max-sm:px-4">
           {CHORDS.map((_, i) => (
             <button
               key={i}
@@ -154,7 +156,9 @@ export function TheoryPage({ onBack }: TheoryPageProps) {
               onClick={() => setDegree(i)}
             >
               <ChordRank
-                rank={ALL_CHORDS[family === "seventh" ? seventhIndexOf(i) : i].rank}
+                rank={
+                  ALL_CHORDS[family === "seventh" ? seventhIndexOf(i) : i].rank
+                }
               />
             </button>
           ))}
@@ -166,8 +170,7 @@ export function TheoryPage({ onBack }: TheoryPageProps) {
           <ChordRank rank={chord.rank} />
         </span>
         <span className="font-mono text-[13px] font-medium tracking-[0.04em] text-muted">
-          {chord.quality} <span className="opacity-45 mx-1">—</span>{" "}
-          {chord.degrees.join("  ")}
+          {chord.quality}
         </span>
       </div>
 

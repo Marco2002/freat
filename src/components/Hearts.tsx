@@ -31,12 +31,14 @@ export function Hearts({ lives, total }: HeartsProps) {
             strokeLinejoin="round"
             opacity={0.28}
           />
-          {/* Keying on the state is what animates the loss: when a heart empties,
-              React swaps this subtree and the shards mount mid-break. Nothing
-              needs to track which heart went — the key change is the event. */}
+          {/* Keying on the state is what animates both directions: when a heart
+              empties React swaps this subtree and the shards mount mid-break,
+              and when one refills the full heart mounts and swells in. Nothing
+              needs to track which heart moved — the key change is the event. */}
           {i < lives ? (
             <g key="full">
               <path
+                className="heart-restore"
                 d={HEART}
                 fill="var(--color-wrong)"
                 stroke="var(--color-wrong)"

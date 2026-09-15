@@ -75,8 +75,8 @@ export type Modifier =
   | { kind: "seventh"; chordIdx: number }
   | { kind: "boss"; boss: BossKind };
 
-/** Pauses between bosses: three ordinary picks, then one imposed. */
-export const BOSS_INTERVAL = 4;
+/** Pauses between bosses: two ordinary picks, then one imposed. */
+export const BOSS_INTERVAL = 3;
 
 /** Seconds a drill gets at each rank of Rush. Rank 0 is an unhurried run. */
 export const RUSH_SECONDS = [30, 20, 10, 5] as const;
@@ -104,8 +104,8 @@ export const availableBosses = (loadout: RunLoadout): BossKind[] =>
   BOSS_KINDS.filter((b) => !loadout.bosses.includes(b) && isUnlocked(loadout, b));
 
 /**
- * Whether the pause after `picksSoFar` modifiers is a boss. Every fourth one,
- * so a run gets three choices of its own before the next rule lands on it.
+ * Whether the pause after `picksSoFar` modifiers is a boss. Every third one,
+ * so a run gets two choices of its own before the next rule lands on it.
  */
 export const isBossPause = (picksSoFar: number): boolean =>
   (picksSoFar + 1) % BOSS_INTERVAL === 0;
@@ -252,14 +252,14 @@ export function modifierInfo(mod: Modifier): { name: string; detail: string } {
       const c = CHORDS[mod.chordIdx];
       return {
         name: `${c.rank} chord`,
-        detail: `Adds the ${c.rank} ${c.quality} — ${c.degrees.join(" ")}`,
+        detail: `Adds the ${c.rank} ${c.quality}`,
       };
     }
     case "seventh": {
       const seventh = SEVENTH_CHORDS[mod.chordIdx];
       return {
         name: seventh.rank,
-        detail: `Adds the ${seventh.rank} beside the ${CHORDS[mod.chordIdx].rank} — ${seventh.quality}, ${seventh.degrees.join(" ")}`,
+        detail: `Adds the ${seventh.rank} beside the ${CHORDS[mod.chordIdx].rank} — ${seventh.quality}`,
       };
     }
     case "boss": {

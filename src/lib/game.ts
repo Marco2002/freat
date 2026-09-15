@@ -197,7 +197,7 @@ export function runReducer(state: RunState, action: RunAction): RunState {
       const drills = state.drills + 1;
       if (state.lives <= 0) return { ...state, drills, stage: "over" };
 
-      // A modifier is owed every so many drills. Every fourth one is a boss:
+      // A modifier is owed every so many drills. Every third one is a boss:
       // not offered, imposed.
       if (drills % MODIFIER_INTERVAL === 0) {
         const bossesLeft = availableBosses(state);
@@ -227,6 +227,13 @@ export function runReducer(state: RunState, action: RunAction): RunState {
 
     case "choose": {
       if (state.stage !== "modifier" && state.stage !== "boss") return state;
+      // Taking a boss buys a heart back — the rule is the price, the life is
+      // what the run gets for it. Never above the three it started with, so a
+      // clean stretch of bosses cannot bank lives.
+      const lives =
+        state.stage === "boss"
+          ? Math.min(state.lives + 1, RUN_LIVES)
+          : state.lives;
       // The clock only starts once the player is looking at a drill again, so
       // reading the cards costs nothing.
       return {
@@ -234,6 +241,7 @@ export function runReducer(state: RunState, action: RunAction): RunState {
           { ...state, ...applyModifier(state, action.modifier) },
           action.at,
         ),
+        lives,
         taken: [...state.taken, action.modifier],
       };
     }

@@ -85,13 +85,6 @@ function pluck(ctx: AudioContext, freq: number, startOffset = 0): void {
   source.stop(now + DURATION);
 }
 
-// noteIdx: 0=C, 1=C#, ..., 11=B. Plays at octave 4 by default (middle octave).
-export function playNoteByIndex(noteIdx: number, octave = 4): void {
-  const freq = 261.63 * Math.pow(2, (noteIdx + (octave - 4) * 12) / 12);
-  const ctx = getCtx();
-  ctx.resume().then(() => pluck(ctx, freq));
-}
-
 export function playNote(string: number, fret: number): void {
   const freq = OPEN_STRING_FREQ[string] * Math.pow(2, fret / 12);
   const ctx = getCtx();

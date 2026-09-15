@@ -1,16 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220">
-  <rect width="200" height="220" fill="#f0eee9"/>
-  <path fill="#29261b" d="
-    M 86,0 L 86,52
-    C 62,52 38,68 38,86
-    C 36,106 52,118 62,122
-    C 52,126 28,146 28,170
-    C 28,198 64,222 100,218
-    C 136,222 172,198 172,170
-    C 172,146 148,126 138,122
-    C 148,118 164,106 162,86
-    C 162,68 138,52 114,52
-    L 114,0 Z
-  "/>
-  <circle cx="100" cy="148" r="22" fill="#f0eee9"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Arpeggio Drill">
+  <title>Arpeggio Drill</title>
+  <!-- Small-size cut of the mark: frets dropped, strings weighted up and pushed
+       darker so the climb still reads at 16px against light browser chrome. -->
+  <rect width="512" height="512" rx="112" fill="#f0eee9"/>
+  <g stroke="#29261b" opacity="0.45" stroke-linecap="round">
+    <path d="M88 136H424" stroke-width="6"/>
+    <path d="M88 216H424" stroke-width="8"/>
+    <path d="M88 296H424" stroke-width="10"/>
+    <path d="M88 376H424" stroke-width="13"/>
+  </g>
+  <circle cx="128" cy="376" r="32" fill="#e0a458"/>
+  <circle cx="213" cy="296" r="32" fill="#29261b"/>
+  <circle cx="299" cy="216" r="32" fill="#29261b"/>
+  <circle cx="384" cy="136" r="32" fill="#c1551f"/>
 </svg>

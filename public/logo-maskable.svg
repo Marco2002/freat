@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Arpeggio Drill">
+  <title>Arpeggio Drill</title>
+  <!-- Maskable cut: same mark, pulled inside the 80% safe circle so a round or
+       squircle mask never clips a string end. -->
+  <rect width="512" height="512" fill="#f0eee9"/>
+  <g transform="translate(256 256) scale(0.78) translate(-256 -256)">
+    <g stroke="#29261b" opacity="0.14" stroke-width="6">
+      <path d="M168 88V424"/>
+      <path d="M256 88V424"/>
+      <path d="M344 88V424"/>
+    </g>
+    <g stroke="#29261b" opacity="0.3" stroke-linecap="round">
+      <path d="M76 136H436" stroke-width="3.5"/>
+      <path d="M76 216H436" stroke-width="5"/>
+      <path d="M76 296H436" stroke-width="7"/>
+      <path d="M76 376H436" stroke-width="9"/>
+    </g>
+    <circle cx="124" cy="376" r="28" fill="#e0a458"/>
+    <circle cx="212" cy="296" r="28" fill="#29261b"/>
+    <circle cx="300" cy="216" r="28" fill="#29261b"/>
+    <circle cx="388" cy="136" r="28" fill="#c1551f"/>
+  </g>
+</svg>
